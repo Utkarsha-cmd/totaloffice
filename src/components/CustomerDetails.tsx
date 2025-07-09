@@ -1,12 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin } from 'lucide-react';
 
 interface CustomerDetailsProps {
   username: string;
@@ -26,9 +24,10 @@ interface CustomerInfo {
   };
 }
 
-const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps) => {
+const CustomerDetails: React.FC<CustomerDetailsProps> = ({ username, userType, onLogout }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
     email: `${username.toLowerCase()}@example.com`,
@@ -37,8 +36,8 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
       street: '123 Main Street',
       city: 'Springfield',
       state: 'CA',
-      zipCode: '90210'
-    }
+      zipCode: '90210',
+    },
   });
 
   const [editedInfo, setEditedInfo] = useState<CustomerInfo>(customerInfo);
@@ -52,8 +51,8 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
     setCustomerInfo(editedInfo);
     setIsEditing(false);
     toast({
-      title: "Profile Updated",
-      description: "Your information has been successfully updated.",
+      title: 'Profile Updated',
+      description: 'Your information has been successfully updated.',
       duration: 3000,
     });
   };
@@ -70,16 +69,8 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
   const updateAddressField = (field: keyof CustomerInfo['address'], value: string) => {
     setEditedInfo(prev => ({
       ...prev,
-      address: { ...prev.address, [field]: value }
+      address: { ...prev.address, [field]: value },
     }));
-  };
-
-  const getRoleBadgeColor = () => {
-    switch (userType) {
-      case 'admin': return 'from-blue-50 to-cyan-50 text-blue-600';
-      case 'staff': return 'from-green-50 to-emerald-50 text-green-600';
-      default: return 'from-purple-50 to-pink-50 text-purple-600';
-    }
   };
 
   return (
@@ -88,17 +79,17 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center">
-              <User className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center">
+              <User className="w-6 h-6 text-green-600" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-700">Welcome, {customerInfo.name}!</h1>
-              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${getRoleBadgeColor()} mt-1`}>
+              <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 mt-1">
                 {userType.charAt(0).toUpperCase() + userType.slice(1)}
               </span>
             </div>
           </div>
-          <Button 
+          <Button
             onClick={onLogout}
             variant="outline"
             className="text-gray-500 border-gray-200 hover:bg-red-25 hover:border-red-200 hover:text-red-500"
@@ -108,15 +99,18 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
           </Button>
         </div>
 
-        {/* Contact Information Card */}
-        <Card className="bg-white/95 backdrop-blur-sm border border-purple-50 shadow-sm">
+        {/* Contact Information */}
+        <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
-              <Mail className="w-5 h-5 text-purple-500" />
+              <Mail className="w-5 h-5 text-green-500" />
               Contact Information
             </CardTitle>
             {!isEditing ? (
-              <Button onClick={handleEdit} className="bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-150 hover:to-pink-150 text-purple-700 border-none shadow-sm">
+              <Button
+                onClick={handleEdit}
+                className="bg-gradient-to-r from-green-100 to-emerald-100 hover:from-green-150 hover:to-emerald-150 text-green-700 border-none shadow-sm"
+              >
                 <Edit3 className="w-4 h-4 mr-2" />
                 Edit
               </Button>
@@ -135,9 +129,10 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name" className="flex items-center gap-2 text-gray-600">
-                  <User className="w-4 h-4 text-purple-500" />
+                  <User className="w-4 h-4 text-green-500" />
                   Full Name
                 </Label>
                 {isEditing ? (
@@ -145,16 +140,17 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="name"
                     value={editedInfo.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.name}</p>
                 )}
               </div>
 
+              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2 text-gray-600">
-                  <Mail className="w-4 h-4 text-purple-500" />
+                  <Mail className="w-4 h-4 text-green-500" />
                   Email
                 </Label>
                 {isEditing ? (
@@ -163,16 +159,17 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     type="email"
                     value={editedInfo.email}
                     onChange={(e) => updateField('email', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.email}</p>
                 )}
               </div>
 
+              {/* Phone */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="phone" className="flex items-center gap-2 text-gray-600">
-                  <Phone className="w-4 h-4 text-purple-500" />
+                  <Phone className="w-4 h-4 text-green-500" />
                   Phone Number
                 </Label>
                 {isEditing ? (
@@ -180,7 +177,7 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="phone"
                     value={editedInfo.phone}
                     onChange={(e) => updateField('phone', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.phone}</p>
@@ -190,16 +187,17 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
           </CardContent>
         </Card>
 
-        {/* Address Information Card */}
-        <Card className="bg-white/95 backdrop-blur-sm border border-purple-50 shadow-sm">
+        {/* Address Information */}
+        <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
-              <MapPin className="w-5 h-5 text-purple-500" />
+              <MapPin className="w-5 h-5 text-green-500" />
               Address Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Street */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="street" className="text-gray-600">Street Address</Label>
                 {isEditing ? (
@@ -207,13 +205,14 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="street"
                     value={editedInfo.address.street}
                     onChange={(e) => updateAddressField('street', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.street}</p>
                 )}
               </div>
 
+              {/* City */}
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-gray-600">City</Label>
                 {isEditing ? (
@@ -221,13 +220,14 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="city"
                     value={editedInfo.address.city}
                     onChange={(e) => updateAddressField('city', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.city}</p>
                 )}
               </div>
 
+              {/* State */}
               <div className="space-y-2">
                 <Label htmlFor="state" className="text-gray-600">State</Label>
                 {isEditing ? (
@@ -235,13 +235,14 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="state"
                     value={editedInfo.address.state}
                     onChange={(e) => updateAddressField('state', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.state}</p>
                 )}
               </div>
 
+              {/* ZIP Code */}
               <div className="space-y-2">
                 <Label htmlFor="zipCode" className="text-gray-600">ZIP Code</Label>
                 {isEditing ? (
@@ -249,7 +250,7 @@ const CustomerDetails = ({ username, userType, onLogout }: CustomerDetailsProps)
                     id="zipCode"
                     value={editedInfo.address.zipCode}
                     onChange={(e) => updateAddressField('zipCode', e.target.value)}
-                    className="bg-white/80 border-purple-100 focus:border-purple-200 focus:ring-purple-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
                   />
                 ) : (
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.zipCode}</p>

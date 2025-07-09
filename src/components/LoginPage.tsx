@@ -4,16 +4,14 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Shield, Users } from 'lucide-react';
-
+import { User, Shield, Users, Wrench } from 'lucide-react'; // Wrench icon for technician
 
 interface LoginPageProps {
-  onLogin: (userType: 'customer' | 'admin' | 'staff', username: string) => void;
+  onLogin: (userType: 'customer' | 'admin' | 'staff' | 'technician', username: string) => void;
 }
 
-
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff'>('customer');
+  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician'>('customer');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -22,7 +20,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     e.preventDefault();
     if (username.trim() && password.trim()) {
       onLogin(selectedUserType, username);
-      navigate('/home'); // Optional: navigate after login
+      navigate('/home');
     }
   };
 
@@ -30,6 +28,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     { type: 'customer' as const, label: 'Customer', icon: User, color: 'from-green-50 to-emerald-50' },
     { type: 'admin' as const, label: 'Admin', icon: Shield, color: 'from-green-50 to-emerald-50' },
     { type: 'staff' as const, label: 'Staff', icon: Users, color: 'from-green-50 to-emerald-50' },
+    { type: 'technician' as const, label: 'Technician', icon: Wrench, color: 'from-green-50 to-emerald-50' },
   ];
 
   return (
@@ -96,7 +95,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </Button>
           </form>
 
-        
           <div className="text-center text-sm text-gray-500">
             New here?{' '}
             <button
