@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Phone, Shield, Lock } from 'lucide-react';
+import { User, Phone, Shield, Lock, Mail } from 'lucide-react'; // added Mail icon
 
 const countryCodes = [
   { code: '+1', label: '🇺🇸' },
@@ -19,6 +19,7 @@ const RegisterPage = () => {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+    email: '', // added email
     phone: '',
     countryCode: '+1',
     role: 'customer',
@@ -80,6 +81,22 @@ const RegisterPage = () => {
               </div>
             </div>
 
+            {/* Email */}
+            <div className="relative">
+              <Label htmlFor="email" className="text-black font-semibold">Email</Label>
+              <Mail className="absolute left-3 bottom-3 text-gray-400" size={16} />
+              <Input
+                id="email"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
+              />
+            </div>
+
+            {/* Phone */}
             <div>
               <Label htmlFor="phone" className="text-black font-semibold">Phone Number</Label>
               <div className="flex">
@@ -110,6 +127,7 @@ const RegisterPage = () => {
               </div>
             </div>
 
+            {/* Role */}
             <div>
               <Label htmlFor="role" className="text-black font-semibold">Select Role</Label>
               <div className="relative">
@@ -128,6 +146,7 @@ const RegisterPage = () => {
               </div>
             </div>
 
+            {/* Password */}
             <div className="relative">
               <Label htmlFor="password" className="text-black font-semibold">Password</Label>
               <Lock className="absolute left-3 bottom-3 text-gray-400" size={16} />
@@ -142,6 +161,7 @@ const RegisterPage = () => {
               />
             </div>
 
+            {/* Confirm Password */}
             <div className="relative">
               <Label htmlFor="confirmPassword" className="text-black font-semibold">Confirm Password</Label>
               <Lock className="absolute left-3 bottom-3 text-gray-400" size={16} />
@@ -156,6 +176,7 @@ const RegisterPage = () => {
               />
             </div>
 
+            {/* Submit */}
             <Button type="submit" className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold">
               Register
             </Button>

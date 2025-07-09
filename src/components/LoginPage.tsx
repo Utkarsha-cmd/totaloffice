@@ -4,22 +4,22 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Shield, Users, Wrench } from 'lucide-react'; // Wrench icon for technician
+import { User, Shield, Users, Wrench, Mail } from 'lucide-react'; // Added Mail icon
 
 interface LoginPageProps {
-  onLogin: (userType: 'customer' | 'admin' | 'staff' | 'technician', username: string) => void;
+  onLogin: (userType: 'customer' | 'admin' | 'staff' | 'technician', useremail: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician'>('customer');
-  const [username, setUsername] = useState('');
+  const [useremail, setUseremail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim() && password.trim()) {
-      onLogin(selectedUserType, username);
+    if (useremail.trim() && password.trim()) {
+      onLogin(selectedUserType, useremail);
       navigate('/home');
     }
   };
@@ -69,16 +69,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="username" className="text-black font-semibold">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="bg-gray-50 border border-gray-300 focus:border-green-400 focus:ring-0 focus:outline-none text-black"
-              />
+              <Label htmlFor="useremail" className="text-black font-semibold">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 bottom-3 text-gray-400" size={16} />
+                <Input
+                  id="useremail"
+                  type="email"
+                  value={useremail}
+                  onChange={(e) => setUseremail(e.target.value)}
+                  required
+                  className="pl-9 bg-gray-50 border border-gray-300 focus:border-green-400 focus:ring-0 focus:outline-none text-black"
+                />
+              </div>
             </div>
+
             <div>
               <Label htmlFor="password" className="text-black font-semibold">Password</Label>
               <Input
@@ -90,6 +94,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 className="bg-gray-50 border border-gray-300 focus:border-green-400 focus:ring-0 focus:outline-none text-black"
               />
             </div>
+
             <Button type="submit" className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold">
               Sign In as {userTypes.find((u) => u.type === selectedUserType)?.label}
             </Button>
