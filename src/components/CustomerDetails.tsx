@@ -4,7 +4,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin } from 'lucide-react';
+import {
+  Edit3,
+  Save,
+  X,
+  LogOut,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  FilePlus,
+} from 'lucide-react';
 
 interface CustomerDetailsProps {
   username: string;
@@ -24,9 +34,14 @@ interface CustomerInfo {
   };
 }
 
-const CustomerDetails: React.FC<CustomerDetailsProps> = ({ username, userType, onLogout }) => {
+const CustomerDetails: React.FC<CustomerDetailsProps> = ({
+  username,
+  userType,
+  onLogout,
+}) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
 
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
@@ -60,17 +75,28 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ username, userType, o
   const handleCancel = () => {
     setEditedInfo(customerInfo);
     setIsEditing(false);
+    setUploadedDocs([]); // clear uploaded files if cancelled
   };
 
   const updateField = (field: keyof CustomerInfo, value: string) => {
     setEditedInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const updateAddressField = (field: keyof CustomerInfo['address'], value: string) => {
+  const updateAddressField = (
+    field: keyof CustomerInfo['address'],
+    value: string
+  ) => {
     setEditedInfo(prev => ({
       ...prev,
       address: { ...prev.address, [field]: value },
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const fileArray = Array.from(e.target.files);
+      setUploadedDocs(fileArray);
+    }
   };
 
   return (
@@ -116,11 +142,18 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ username, userType, o
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button onClick={handleSave} className="bg-green-50 hover:bg-green-100 text-green-700 border-green-100">
+                <Button
+                  onClick={handleSave}
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-100"
+                >
                   <Save className="w-4 h-4 mr-2" />
                   Save
                 </Button>
-                <Button onClick={handleCancel} variant="outline" className="border-gray-200 text-gray-500">
+                <Button
+                  onClick={handleCancel}
+                  variant="outline"
+                  className="border-gray-200 text-gray-500"
+                >
                   <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
@@ -256,6 +289,44 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ username, userType, o
                   <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.zipCode}</p>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Document Upload */}
+        <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+              <FilePlus className="w-5 h-5 text-green-500" />
+              Attach Documents (KYC, etc.)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="kycDocs" className="text-gray-600">Upload Files</Label>
+              {isEditing ? (
+                <>
+                  <Input
+                    id="kycDocs"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    multiple
+                    onChange={handleFileChange}
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                  />
+                  {uploadedDocs.length > 0 && (
+                    <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
+                      {uploadedDocs.map((file, index) => (
+                        <li key={index}>{file.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <p className="p-2 bg-gray-25 rounded-md text-gray-500 italic">
+                  No documents attached
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
