@@ -4,10 +4,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Shield, Users, Wrench, Mail } from 'lucide-react'; // Added Mail icon
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { User, Shield, Users, Wrench, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface LoginPageProps {
-  onLogin: (userType: 'customer' | 'admin' | 'staff' | 'technician', useremail: string) => void;
+  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician', username: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
@@ -15,12 +18,86 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [useremail, setUseremail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  interface LoginResponse {
+    role: 'customer' | 'admin' | 'staff' | 'technician';
+    // Add other properties that might be in the response
+    [key: string]: any;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (useremail.trim() && password.trim()) {
-      onLogin(selectedUserType, useremail);
-      navigate('/home');
+    
+    // Clear any previous errors
+    toast.dismiss();
+    
+    // Validate inputs
+    if (!useremail.trim()) {
+      toast.error('Please enter your email');
+      return;
+    }
+    
+    if (!password.trim()) {
+      toast.error('Please enter your password');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Show loading toast
+      const toastId = toast.loading('Signing in...');
+      
+      try {
+        // Authenticate with the backend
+        const response = await login(useremail, password);
+        console.log('Login response:', response);
+        
+        if (!response) {
+          throw new Error('No response from server');
+        }
+        
+        // Get the role from response or use the selected user type as fallback
+        const roleFromResponse = response.role?.toLowerCase();
+        const allowedRoles = ['customer', 'admin', 'staff', 'technician'] as const;
+        type AllowedRole = typeof allowedRoles[number];
+        
+        const userRole: AllowedRole = 
+          allowedRoles.includes(roleFromResponse as AllowedRole) 
+            ? roleFromResponse as AllowedRole 
+            : selectedUserType;
+        
+        console.log('Determined user role:', userRole);
+        
+        // Call the onLogin callback with the user role and email
+        // This will update the parent component's state and localStorage
+        onLogin(userRole, useremail);
+        
+        // Show success message
+        toast.success('Login successful!', { id: toastId });
+        
+        // Navigate to the appropriate dashboard based on user role
+        // The timeout ensures the parent component has time to process the state change
+        setTimeout(() => {
+          console.log(`Navigating to /${userRole}`);
+          // Force a full page reload to ensure all state is properly initialized
+          window.location.href = `/${userRole}`;
+        }, 100);
+        
+      } catch (error: any) {
+        console.error('Login error:', error);
+        
+        // More specific error messages based on error type
+        const errorMessage = error.message || 'Failed to sign in. Please try again.';
+        toast.error(errorMessage, { id: toastId });
+        
+        // Clear password field on error
+        setPassword('');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,33 +115,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
             Welcome
           </CardTitle>
-          <p className="text-gray-500 mt-2">Please select your role and sign in</p>
+          <p className="text-gray-500 mt-2">Please sign in to continue</p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Role Selector */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-600">Select Your Role</Label>
-            <div className="grid grid-cols-1 gap-2">
-              {userTypes.map(({ type, label, icon: Icon, color }) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setSelectedUserType(type)}
-                  className={`
-                    p-3 rounded-lg border-2 transition-all duration-200 flex items-center gap-3
-                    ${selectedUserType === type
-                      ? `border-green-200 bg-gradient-to-r ${color} shadow-sm`
-                      : 'border-gray-100 bg-white/70 hover:border-green-100'}
-                  `}
-                >
-                  <Icon className={`w-5 h-5 ${selectedUserType === type ? 'text-green-600' : 'text-gray-400'}`} />
-                  <span className={`font-medium ${selectedUserType === type ? 'text-green-700' : 'text-gray-500'}`}>
-                    {label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,8 +148,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               />
             </div>
 
-            <Button type="submit" className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold">
-              Sign In as {userTypes.find((u) => u.type === selectedUserType)?.label}
+
+
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 

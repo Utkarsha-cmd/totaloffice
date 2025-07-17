@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Edit3,
-  Save,
-  X,
-  LogOut,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  FilePlus,
-} from 'lucide-react';
-
+import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus } from 'lucide-react';
+import axios from 'axios';
+import { authService } from '@/services/authService';
+ 
 interface CustomerDetailsProps {
   username: string;
   userType: 'customer' | 'admin' | 'staff';
   onLogout: () => void;
 }
-
+ 
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  token: string;
+}
+ 
 interface CustomerInfo {
   name: string;
   email: string;
@@ -33,7 +33,23 @@ interface CustomerInfo {
     zipCode: string;
   };
 }
-
+ 
+interface UserProfile {
+  _id?: string;
+  name: string;
+  company: string;
+  duration: string;
+  services: {
+    current: string[];
+    past: string[];
+  };
+  document?: string | null;
+  contact: string; // This is the email
+  billingAddress: string;
+  paymentInfo: string;
+  createdAt?: Date;
+}
+ 
 const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   username,
   userType,
@@ -41,47 +57,308 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
 }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
-
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
-    email: `${username.toLowerCase()}@example.com`,
-    phone: '+1 (555) 123-4567',
+    email: '',
+    phone: '',
     address: {
-      street: '123 Main Street',
-      city: 'Springfield',
-      state: 'CA',
-      zipCode: '90210',
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
     },
   });
-
+ 
   const [editedInfo, setEditedInfo] = useState<CustomerInfo>(customerInfo);
-
-  const handleEdit = () => {
+  const [document, setDocument] = useState<File | undefined>(undefined);
+ 
+  // Fetch current authenticated user and their profile
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+       
+        // Get current authenticated user from localStorage
+        const authUser = authService.getCurrentUser();
+        if (!authUser) {
+          setError('Not authenticated. Please log in again.');
+          return;
+        }
+       
+        setCurrentUser(authUser);
+       
+        try {
+          // First try to get user profile using their email
+          const response = await axios.get(`http://localhost:5000/api/users?contact=${encodeURIComponent(authUser.email)}`, {
+            headers: {
+              Authorization: `Bearer ${authUser.token}`
+            }
+          });
+         
+          const userData = response.data[0]; // Response is an array
+          console.log('User profile data:', userData);
+         
+          if (userData) {
+            // Set the complete user profile
+            setUserProfile(userData);
+           
+            // Update customer info with the profile data
+            setCustomerInfo({
+              name: userData.name,
+              email: userData.contact, // Email stored as contact
+              phone: userData.company, // Company field used as phone
+              address: {
+                street: userData.billingAddress ? userData.billingAddress.split(',')[0] || '' : '',
+                city: userData.billingAddress ? userData.billingAddress.split(',')[1] || '' : '',
+                state: userData.billingAddress ? userData.billingAddress.split(',')[2] || '' : '',
+                zipCode: userData.billingAddress ? userData.billingAddress.split(',')[3] || '' : '',
+              },
+            });
+          } else {
+            setError('User profile not found. Please contact support.');
+          }
+        } catch (err: any) {
+          console.error('Error fetching user profile:', err);
+          // Handle different error cases
+          if (err.response?.status === 401) {
+            setError('Authentication failed. Please log in again.');
+          } else if (err.response?.status === 403) {
+            setError('Access denied. Please contact support.');
+          } else if (err.response?.status === 404) {
+            setError('User profile not found. Please contact support.');
+          } else {
+            setError('Failed to load profile. Please try again.');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError(err.message || 'Failed to load user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+   
+    fetchUserData();
+  }, []);
+ 
+  // Update editedInfo when customerInfo changes
+  useEffect(() => {
     setEditedInfo(customerInfo);
+  }, [customerInfo]);
+ 
+  const handleEdit = () => {
+    // Verify the user is editing their own profile
+    if (!currentUser) {
+      toast({
+        title: 'Authentication Error',
+        description: 'You must be logged in to edit your profile.',
+        duration: 3000,
+      });
+      return;
+    }
+ 
+    // Set the edited info to match current customer info
+    setEditedInfo({
+      name: customerInfo.name,
+      email: customerInfo.email,
+      phone: customerInfo.phone,
+      address: {
+        street: customerInfo.address.street,
+        city: customerInfo.address.city,
+        state: customerInfo.address.state,
+        zipCode: customerInfo.address.zipCode,
+      },
+      document: undefined // Initialize document as undefined
+    });
+   
     setIsEditing(true);
   };
-
-  const handleSave = () => {
-    setCustomerInfo(editedInfo);
-    setIsEditing(false);
-    toast({
-      title: 'Profile Updated',
-      description: 'Your information has been successfully updated.',
-      duration: 3000,
-    });
+ 
+  const handleSave = async () => {
+    if (!currentUser || !userProfile?._id) {
+      toast({
+        title: 'Error',
+        description: 'Unable to update profile. Authentication information missing.',
+        duration: 3000,
+      });
+      return;
+    }
+   
+    try {
+      // Prepare the updated user data
+      const formData = new FormData();
+      formData.append('name', editedInfo.name);
+      formData.append('company', editedInfo.phone); // Using phone for company field
+      formData.append('duration', userProfile?.duration);
+     
+      // Preserve existing services
+      if (userProfile?.services && userProfile.services.current && userProfile.services.current.length > 0) {
+        userProfile.services.current.forEach(service => {
+          formData.append('currentServices', service);
+        });
+      }
+     
+      if (userProfile?.services && userProfile.services.past && userProfile.services.past.length > 0) {
+        userProfile.services.past.forEach(service => {
+          formData.append('pastServices', service);
+        });
+      }
+     
+      // Update contact (email)
+      formData.append('contact', editedInfo.email);
+     
+      // Combine address fields
+      const fullAddress = [
+        editedInfo.address.street,
+        editedInfo.address.city,
+        editedInfo.address.state,
+        editedInfo.address.zipCode
+      ].filter(Boolean).join(',');
+     
+      formData.append('billingAddress', fullAddress);
+      formData.append('paymentInfo', userProfile?.paymentInfo);
+     
+      // If editing document
+      if (document) {
+        formData.append('document', document);
+      }
+     
+      // Send update request
+      const response = await axios.put(`http://localhost:5000/api/users/${userProfile._id}`, formData, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+ 
+      // Update local state with new data
+      setUserProfile(response.data);
+      setCustomerInfo({
+        name: editedInfo.name,
+        email: editedInfo.email,
+        phone: editedInfo.phone,
+        address: {
+          street: editedInfo.address.street,
+          city: editedInfo.address.city,
+          state: editedInfo.address.state,
+          zipCode: editedInfo.address.zipCode,
+        },
+      });
+ 
+      // Reset edited info and document
+      setEditedInfo({
+        name: editedInfo.name,
+        email: editedInfo.email,
+        phone: editedInfo.phone,
+        address: {
+          street: editedInfo.address.street,
+          city: editedInfo.address.city,
+          state: editedInfo.address.state,
+          zipCode: editedInfo.address.zipCode,
+        }
+      });
+      setDocument(undefined);
+ 
+      setIsEditing(false);
+     
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully!',
+        duration: 3000,
+        className: 'bg-green-50 border-green-100 text-green-700',
+        style: {
+          backgroundColor: 'rgba(22, 163, 74, 0.1)',
+          color: '#16a34a',
+          borderColor: '#16a34a',
+        },
+      });
+    } catch (err: any) {
+      console.error('Profile update error:', err);
+     
+      // Handle different types of errors
+      if (axios.isAxiosError(err)) {
+        // Handle Axios errors
+        if (err.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          const errorMessage = err.response.data?.message ||
+            `Server error: ${err.response.status}`;
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            duration: 3000,
+            className: 'bg-red-50 border-red-100 text-red-700',
+            style: {
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              borderColor: '#ef4444',
+            },
+          });
+        } else if (err.request) {
+          // The request was made but no response was received
+          toast({
+            title: 'Error',
+            description: 'No response from server. Please try again later.',
+            duration: 3000,
+            className: 'bg-red-50 border-red-100 text-red-700',
+            style: {
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              borderColor: '#ef4444',
+            },
+          });
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          toast({
+            title: 'Error',
+            description: 'Request failed. Please check your internet connection.',
+            duration: 3000,
+            className: 'bg-red-50 border-red-100 text-red-700',
+            style: {
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              borderColor: '#ef4444',
+            },
+          });
+        }
+      } else {
+        // Handle other errors
+          toast({
+            title: 'Error',
+            description: err.message || 'An unexpected error occurred. Please try again.',
+            duration: 3000,
+            className: 'bg-red-50 border-red-100 text-red-700',
+            style: {
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              borderColor: '#ef4444',
+            },
+          });
+      }
+    }
   };
-
+ 
   const handleCancel = () => {
+    // ... rest of the code remains the same ...
     setEditedInfo(customerInfo);
     setIsEditing(false);
-    setUploadedDocs([]); // clear uploaded files if cancelled
+    setUploadedDocs([]); 
   };
-
+ 
   const updateField = (field: keyof CustomerInfo, value: string) => {
-    setEditedInfo(prev => ({ ...prev, [field]: value }));
+    setEditedInfo(prev => ({
+      ...prev,
+      [field]: value,
+      document: prev.document 
+    }));
   };
-
+ 
   const updateAddressField = (
     field: keyof CustomerInfo['address'],
     value: string
@@ -89,19 +366,42 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     setEditedInfo(prev => ({
       ...prev,
       address: { ...prev.address, [field]: value },
+      document: prev.document 
     }));
   };
-
+ 
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDocument(file);
+    }
+  };
+ 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const fileArray = Array.from(e.target.files);
       setUploadedDocs(fileArray);
     }
   };
-
+ 
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-3 text-red-700">
+            <AlertCircle className="w-5 h-5" />
+            <p>{error}</p>
+          </div>
+        )}
+       
+        {/* Loading indicator */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
+            <p className="mt-2 text-gray-600">Loading your profile...</p>
+          </div>
+        )}
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -124,11 +424,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             Logout
           </Button>
         </div>
-
+ 
         {/* Contact Information */}
         <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+            <CardTitle className="flex items-center gap-2 text-xl text-black">
               <Mail className="w-5 h-5 text-green-500" />
               Contact Information
             </CardTitle>
@@ -164,7 +464,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="flex items-center gap-2 text-gray-600">
+                <Label htmlFor="name" className="flex items-center gap-2 text-black">
                   <User className="w-4 h-4 text-green-500" />
                   Full Name
                 </Label>
@@ -173,16 +473,16 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     id="name"
                     value={editedInfo.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.name}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.name}</p>
                 )}
               </div>
-
+ 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2 text-gray-600">
+                <Label htmlFor="email" className="flex items-center gap-2 text-gray-700">
                   <Mail className="w-4 h-4 text-green-500" />
                   Email
                 </Label>
@@ -192,38 +492,40 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     type="email"
                     value={editedInfo.email}
                     onChange={(e) => updateField('email', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                    disabled // Disable email field as it's used for authentication
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.email}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.email}</p>
                 )}
               </div>
-
+ 
               {/* Phone */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="phone" className="flex items-center gap-2 text-gray-600">
+                <Label htmlFor="phone" className="flex items-center gap-2 text-black">
                   <Phone className="w-4 h-4 text-green-500" />
-                  Phone Number
+                  Company
                 </Label>
                 {isEditing ? (
                   <Input
                     id="phone"
                     value={editedInfo.phone}
                     onChange={(e) => updateField('phone', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                    placeholder="Enter phone number"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.phone}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.phone}</p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-
+ 
         {/* Address Information */}
         <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+            <CardTitle className="flex items-center gap-2 text-xl text-black">
               <MapPin className="w-5 h-5 text-green-500" />
               Address Information
             </CardTitle>
@@ -232,67 +534,67 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Street */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="street" className="text-gray-600">Street Address</Label>
+                <Label htmlFor="street" className="text-black">Street Address</Label>
                 {isEditing ? (
                   <Input
                     id="street"
                     value={editedInfo.address.street}
                     onChange={(e) => updateAddressField('street', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.street}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.street}</p>
                 )}
               </div>
-
+ 
               {/* City */}
               <div className="space-y-2">
-                <Label htmlFor="city" className="text-gray-600">City</Label>
+                <Label htmlFor="city" className="text-black">City</Label>
                 {isEditing ? (
                   <Input
                     id="city"
                     value={editedInfo.address.city}
                     onChange={(e) => updateAddressField('city', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.city}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.city}</p>
                 )}
               </div>
-
+ 
               {/* State */}
               <div className="space-y-2">
-                <Label htmlFor="state" className="text-gray-600">State</Label>
+                <Label htmlFor="state" className="text-black">State</Label>
                 {isEditing ? (
                   <Input
                     id="state"
                     value={editedInfo.address.state}
                     onChange={(e) => updateAddressField('state', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.state}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.state}</p>
                 )}
               </div>
-
+ 
               {/* ZIP Code */}
               <div className="space-y-2">
-                <Label htmlFor="zipCode" className="text-gray-600">ZIP Code</Label>
+                <Label htmlFor="zipCode" className="text-black">ZIP Code</Label>
                 {isEditing ? (
                   <Input
                     id="zipCode"
                     value={editedInfo.address.zipCode}
                     onChange={(e) => updateAddressField('zipCode', e.target.value)}
-                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-gray-600">{customerInfo.address.zipCode}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.zipCode}</p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-
+ 
         {/* Document Upload */}
         <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
           <CardHeader>
@@ -334,5 +636,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     </div>
   );
 };
-
+ 
 export default CustomerDetails;
+ 
+ 
+

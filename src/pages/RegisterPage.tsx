@@ -4,7 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { User, Phone, Shield, Lock, Mail } from 'lucide-react'; // added Mail icon
+import { User, Phone, Shield, Lock, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const countryCodes = [
   { code: '+1', label: '🇺🇸' },
@@ -16,12 +18,13 @@ const countryCodes = [
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '', // added email
+    name: '',
+    email: '',
     phone: '',
-    countryCode: '+1',
+    countryCode: '+91',
     role: 'customer',
     password: '',
     confirmPassword: '',
@@ -32,16 +35,39 @@ const RegisterPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (form.password !== form.confirmPassword) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
-    const fullPhone = `${form.countryCode} ${form.phone}`;
-    console.log('Registering:', { ...form, phone: fullPhone });
-    navigate('/');
+    if (form.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const phoneNumber = `${form.countryCode}${form.phone}`;
+      
+      await register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        phone: phoneNumber,
+        role: form.role,
+      });
+      
+      toast.success('Registration successful! Please log in.');
+      navigate('/login');
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -55,50 +81,49 @@ const RegisterPage = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
-                <Label htmlFor="firstName" className="text-black font-semibold">First Name</Label>
-                <User className="absolute left-3 bottom-3 text-gray-400" size={16} />
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  required
-                  className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
-                />
-              </div>
-              <div className="relative">
-                <Label htmlFor="lastName" className="text-black font-semibold">Last Name</Label>
-                <User className="absolute left-3 bottom-3 text-gray-400" size={16} />
-                <Input
-                  id="lastName"
-                  name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  required
-                  className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
-                />
+              <div>
+                <Label htmlFor="name" className="text-gray-700">
+                  Full Name
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={form.name}
+                    onChange={handleChange}
+                    required
+                    className="pl-10 bg-white text-yellow-600 placeholder-yellow-400"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Email */}
             <div className="relative">
-              <Label htmlFor="email" className="text-black font-semibold">Email</Label>
-              <Mail className="absolute left-3 bottom-3 text-gray-400" size={16} />
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
-              />
+              <Label htmlFor="email" className="text-gray-700">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="pl-10 bg-white text-yellow-600 placeholder-yellow-400"
+                />
+              </div>
             </div>
 
             {/* Phone */}
             <div>
-              <Label htmlFor="phone" className="text-black font-semibold">Phone Number</Label>
+              <Label htmlFor="phone" className="text-gray-700">
+                Phone Number
+              </Label>
               <div className="flex">
                 <select
                   name="countryCode"
@@ -129,19 +154,23 @@ const RegisterPage = () => {
 
             {/* Role */}
             <div>
-              <Label htmlFor="role" className="text-black font-semibold">Select Role</Label>
+              <Label htmlFor="role" className="text-gray-700">
+                Role
+              </Label>
               <div className="relative">
-                <Shield className="absolute left-3 bottom-3 text-gray-400" size={16} />
+                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <select
                   id="role"
                   name="role"
                   value={form.role}
                   onChange={handleChange}
-                  className="w-full pl-9 p-2 rounded bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                  required
                 >
                   <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
                   <option value="staff">Staff</option>
+                  <option value="technician">Technician</option>
+                  <option value="admin">Admin</option>
                 </select>
               </div>
             </div>
@@ -177,8 +206,12 @@ const RegisterPage = () => {
             </div>
 
             {/* Submit */}
-            <Button type="submit" className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold">
-              Register
+            <Button 
+              type="submit" 
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md transition duration-300"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
 
             <div className="text-center text-sm mt-3 text-gray-600">

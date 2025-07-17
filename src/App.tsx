@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,21 +43,63 @@ const dummyCustomers = [
 ];
 
 const App = () => {
-  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | null>(null);
-  const [username, setUsername] = useState<string>("");
+  // Initialize state from localStorage if available
+  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | null>(
+    () => {
+      const savedRole = localStorage.getItem('userRole');
+      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | null;
+    }
+  );
+  const [username, setUsername] = useState<string>(
+    () => localStorage.getItem('username') || ''
+  );
 
   const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician', username: string) => {
     console.log("User logged in:", role, username);
+    // Save to state and localStorage
     setUserRole(role);
     setUsername(username);
+    localStorage.setItem('userRole', role);
+    localStorage.setItem('username', username);
   };
 
   const handleLogout = () => {
     setUserRole(null);
     setUsername("");
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
   };
 
+  // Add a loading state to prevent premature redirects
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Check for saved auth state on initial load
+  useEffect(() => {
+    const savedRole = localStorage.getItem('userRole');
+    const savedUsername = localStorage.getItem('username');
+    
+    if (savedRole && savedUsername) {
+      setUserRole(savedRole as any);
+      setUsername(savedUsername);
+    }
+    setIsLoading(false);
+  }, []);
+  
   const getHomeComponent = () => {
+    console.log('getHomeComponent - userRole:', userRole, 'username:', username);
+    
+    // Show loading state while checking auth
+    if (isLoading) {
+      return <div>Loading...</div>;
+    }
+    
+    // If we're not logged in, redirect to login
+    if (!userRole) {
+      console.log('No user role, redirecting to login');
+      return <Navigate to="/login" replace />;
+    }
+    
+    console.log(`Rendering dashboard for role: ${userRole}`);
     switch (userRole) {
       case "admin":
         return <AdminDashboard username={username} userType={userRole} onLogout={handleLogout} />;
@@ -79,6 +121,26 @@ const App = () => {
     }
   };
 
+  console.log('App render - userRole:', userRole, 'username:', username);
+  
+  // Log route rendering for debugging
+  React.useEffect(() => {
+    console.log('Rendering routes with userRole:', userRole);
+  }, [userRole]);
+  
+  // Add a protected route component
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (isLoading) {
+      return <div>Loading...</div>;
+    }
+    
+    if (!userRole) {
+      return <Navigate to="/login" replace />;
+    }
+    
+    return <>{children}</>;
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -86,10 +148,57 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/login" element={
+              userRole ? <Navigate to="/admin" replace /> : <LoginPage onLogin={handleLogin} />
+            } />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/home" element={getHomeComponent()} />
+            
+            {/* Protected routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                {userRole === 'admin' ? (
+                  <AdminDashboard username={username} userType={userRole} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/staff" element={
+              <ProtectedRoute>
+                {userRole === 'staff' ? (
+                  <StaffDashboard
+                    username={username}
+                    userType="staff"
+                    onLogout={handleLogout}
+                    customers={dummyCustomers}
+                  />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customer" element={
+              <ProtectedRoute>
+                {userRole === 'customer' ? (
+                  <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/" element={
+              isLoading ? (
+                <div>Loading...</div>
+              ) : userRole ? (
+                <Navigate to={`/${userRole}`} replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
