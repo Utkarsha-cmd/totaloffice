@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LayoutDashboard, Users, Clock, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,12 +25,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
+    firstName: '',
+    lastName: '',
+    vatCode: '',
     name: '',
     company: '',
     duration: '',
     services: { current: [], past: [] },
     document: null,
-    contact: '',
+    email: '',
+    phone: '',
     billingAddress: '',
     paymentInfo: '',
   });
@@ -42,6 +46,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [addressError, setAddressError] = useState('');
+  const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setServiceDropdownOpen(false);
+    }
+  };
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
 
   const handlePostcodeLookup = async () => {
     if (!postcode.trim()) {
@@ -146,11 +162,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
 
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('name', newCustomer.name);
+      formData.append('name', `${newCustomer.firstName} ${newCustomer.lastName}`);
+      formData.append('vatCode', newCustomer.vatCode);
       formData.append('company', newCustomer.company);
       formData.append('duration', newCustomer.duration);
       formData.append('services', JSON.stringify(newCustomer.services));
-      formData.append('contact', newCustomer.contact);
+      formData.append('contact', `${newCustomer.email} | ${newCustomer.phone}`);
       formData.append('billingAddress', newCustomer.billingAddress);
       formData.append('paymentInfo', newCustomer.paymentInfo);
       
@@ -408,184 +425,258 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
           </div>
 
           {showAddForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
-                <h2 className="text-xl font-semibold mb-4 text-blue-700">Add New Customer</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {[
-                    ['Full Name', 'name'],
-                    ['Company', 'company'],
-                    ['Duration (e.g. 2 years)', 'duration'],
-                    ['Contact Email or Phone', 'contact'],
-                    ['Payment Info', 'paymentInfo'],
-                  ].map(([placeholder, field]) => (
-                    <input
-                      key={field}
-                      type="text"
-                      placeholder={placeholder}
-                      value={newCustomer[field as keyof Customer] as string}
-                      onChange={e => setNewCustomer({ ...newCustomer, [field]: e.target.value })}
-                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                    />
-                  ))}
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
+      <h2 className="text-xl font-semibold mb-4 text-blue-700">Add New Customer</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-                  {/* Postcode Lookup */}
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Enter UK Postcode (e.g., M3 1SH)"
-                          value={postcode}
-                          onChange={e => setPostcode(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
-                          className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                        />
-                        <button
-                          type="button"
-                          onClick={handlePostcodeLookup}
-                          disabled={isLoadingAddress}
-                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-                        >
-                          {isLoadingAddress ? 'Looking...' : 'Find'}
-                        </button>
-                      </div>
-                      
-                      {/* Address Dropdown */}
-                      {isLoadingAddress ? (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
-                          <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
-                        </div>
-                      ) : addressSuggestions.length > 0 ? (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                          <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
-                            Found {addressSuggestions.length} addresses:
-                          </div>
-                          {addressSuggestions.map((address, index) => (
-                            <div
-                              key={index}
-                              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                              onClick={() => {
-                                handleAddressSelect(address);
-                                setAddressSuggestions([]);
-                              }}
-                            >
-                              {address}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                    
-                    {addressError && (
-                      <p className="text-red-500 text-sm">{addressError}</p>
-                    )}
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
-                      <input
-                        type="text"
-                        placeholder="Address will appear here after selection"
-                        value={newCustomer.billingAddress}
-                        onChange={e => setNewCustomer({ ...newCustomer, billingAddress: e.target.value })}
-                        className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                      />
-                      {addressSuggestions.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                          {addressSuggestions.map((suggestion, index) => (
-                            <div
-                              key={index}
-                              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => handleAddressSelect(suggestion)}
-                            >
-                              {suggestion}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder="Current Services (comma separated)"
-                    onChange={e =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        services: {
-                          ...newCustomer.services,
-                          current: e.target.value.split(',').map(s => s.trim()),
-                        },
-                      })
-                    }
-                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Past Services (comma separated)"
-                    onChange={e =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        services: {
-                          ...newCustomer.services,
-                          past: e.target.value.split(',').map(s => s.trim()),
-                        },
-                      })
-                    }
-                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                  />
-                  <input
-                    type="file"
-                    accept="application/pdf,image/*"
-                    onChange={e =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        document: e.target.files ? e.target.files[0] : null,
-                      })
-                    }
-                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
-                  />
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setShowAddForm(false)}
-                    className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddCustomer}
-                    className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Add Customer
-                  </button>
-                </div>
-              </div>
+        {/* 1. Postcode + Address */}
+        <div className="md:col-span-2 space-y-2">
+          <div className="relative">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter UK Postcode (e.g., M3 1SH)"
+                value={postcode}
+                onChange={e => setPostcode(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
+                className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+              />
+              <button
+                type="button"
+                onClick={handlePostcodeLookup}
+                disabled={isLoadingAddress}
+                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                {isLoadingAddress ? 'Looking...' : 'Find'}
+              </button>
             </div>
+
+            {isLoadingAddress ? (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
+                <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
+              </div>
+            ) : addressSuggestions.length > 0 ? (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
+                  Found {addressSuggestions.length} addresses:
+                </div>
+                {addressSuggestions.map((address, index) => (
+                  <div
+                    key={index}
+                    className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    onClick={() => {
+                      handleAddressSelect(address);
+                      setAddressSuggestions([]);
+                    }}
+                  >
+                    {address}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {addressError && (
+            <p className="text-red-500 text-sm">{addressError}</p>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+            <input
+              type="text"
+              placeholder="Address will appear here after selection"
+              value={newCustomer.billingAddress}
+              onChange={e => setNewCustomer({ ...newCustomer, billingAddress: e.target.value })}
+              className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+            />
+          </div>
+        </div>
+
+        {/* 2. Full Name */}
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={newCustomer.name}
+          onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 3. Last Name */}
+        <input
+          type="text"
+          placeholder="Last Name"
+          value={newCustomer.lastName || ''}
+          onChange={e => setNewCustomer({ ...newCustomer, lastName: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 4. Company */}
+        <input
+          type="text"
+          placeholder="Company"
+          value={newCustomer.company}
+          onChange={e => setNewCustomer({ ...newCustomer, company: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 5. Duration */}
+        <input
+          type="text"
+          placeholder="Duration (e.g. 2 years)"
+          value={newCustomer.duration}
+          onChange={e => setNewCustomer({ ...newCustomer, duration: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 6. Email */}
+        <input
+          type="text"
+          placeholder="Email Address"
+          value={newCustomer.email}
+          onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 7. Phone */}
+        <input
+          type="text"
+          placeholder="Phone Number"
+          value={newCustomer.phone}
+          onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 8. Payment Info */}
+        <input
+          type="text"
+          placeholder="Payment Info"
+          value={newCustomer.paymentInfo}
+          onChange={e => setNewCustomer({ ...newCustomer, paymentInfo: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 9. VAT Code */}
+        <input
+          type="text"
+          placeholder="Customer VAT Code"
+          value={newCustomer.vatCode}
+          onChange={e => setNewCustomer({ ...newCustomer, vatCode: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 10. Services (multi-select) */}
+                <div className="md:col-span-2 relative">
+  <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+  <div
+    className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
+    onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
+  >
+    {newCustomer.services.current.length > 0
+      ? newCustomer.services.current.join(', ')
+      : 'Select services'}
+  </div>
+
+  {serviceDropdownOpen && (
+    <div
+      ref={dropdownRef}
+      className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
+    >
+      {[
+        "Totally Tasty",
+        "Cleaning and Janitorial Supplies",
+        "Business Supplies",
+        "Business Print",
+        "Managed Print",
+        "Mailroom Equipment",
+        "Secure Shredding",
+        "Workspace",
+        "Office Plants & Plant Displays",
+        "Workwear",
+        "Defibrillators",
+      ].map((service) => (
+        <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            className="mr-2"
+            checked={newCustomer.services.current.includes(service)}
+            onChange={() => {
+              const isChecked = newCustomer.services.current.includes(service);
+              const updated = isChecked
+                ? newCustomer.services.current.filter((s) => s !== service)
+                : [...newCustomer.services.current, service];
+              setNewCustomer({
+                ...newCustomer,
+                services: {
+                  ...newCustomer.services,
+                  current: updated,
+                },
+              });
+            }}
+          />
+          {service}
+        </label>
+      ))}
+    </div>
+  )}
+</div>
+
+        {/* 11. Past Services */}
+        <input
+          type="text"
+          placeholder="Past Services (comma separated)"
+          onChange={e =>
+            setNewCustomer({
+              ...newCustomer,
+              services: {
+                ...newCustomer.services,
+                past: e.target.value.split(',').map(s => s.trim()),
+              },
+            })
+          }
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
+        />
+
+        {/* 12. Document Upload */}
+        <input
+          type="file"
+          accept="application/pdf,image/*"
+          onChange={e =>
+            setNewCustomer({
+              ...newCustomer,
+              document: e.target.files ? e.target.files[0] : null,
+            })
+          }
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
+        />
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setShowAddForm(false)}
+          className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleAddCustomer}
+          className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Add Customer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
           {showEditForm && editingCustomer && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
                 <h2 className="text-xl font-semibold mb-4 text-blue-700">Edit Customer</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {[
-                    ['Full Name', 'name'],
-                    ['Company', 'company'],
-                    ['Duration (e.g. 2 years)', 'duration'],
-                    ['Contact Email or Phone', 'contact'],
-                    ['Payment Info', 'paymentInfo'],
-                  ].map(([placeholder, field]) => (
-                    <input
-                      key={field}
-                      type="text"
-                      placeholder={placeholder}
-                      value={editingCustomer[field as keyof Customer] as string}
-                      onChange={e => setEditingCustomer({ ...editingCustomer, [field]: e.target.value })}
-                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                    />
-                  ))}
-
                   {/* Postcode Lookup */}
                   <div className="space-y-2">
                     <div className="relative">
@@ -649,22 +740,153 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                       />
                     </div>
                   </div>
+                   {/* 2. Full Name */}
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={editingCustomer.name}
+          onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
 
+        {/* 3. Last Name */}
+        <input
+          type="text"
+          placeholder="Last Name"
+          value={editingCustomer.lastName || ''}
+          onChange={e => setEditingCustomer({ ...editingCustomer, lastName: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 4. Company */}
+        <input
+          type="text"
+          placeholder="Company"
+          value={editingCustomer.company}
+          onChange={e => setEditingCustomer({ ...editingCustomer, company: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 5. Duration */}
+        <input
+          type="text"
+          placeholder="Duration (e.g. 2 years)"
+          value={editingCustomer.duration}
+          onChange={e => setEditingCustomer({ ...editingCustomer, duration: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 6. Email */}
+        <input
+          type="text"
+          placeholder="Email Address"
+          value={editingCustomer.email}
+          onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 7. Phone */}
+        <input
+          type="text"
+          placeholder="Phone Number"
+          value={editingCustomer.phone}
+          onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 8. Payment Info */}
+        <input
+          type="text"
+          placeholder="Payment Info"
+          value={editingCustomer.paymentInfo}
+          onChange={e => setEditingCustomer({ ...editingCustomer, paymentInfo: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 9. VAT Code */}
+        <input
+          type="text"
+          placeholder="Customer VAT Code"
+          value={editingCustomer.vatCode}
+          onChange={e => setEditingCustomer({ ...editingCustomer, vatCode: e.target.value })}
+          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+        />
+
+        {/* 10. Services (Multi-select Dropdown) */}
+        <div className="md:col-span-2 relative">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+          <div
+            className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
+            onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
+          >
+            {editingCustomer.services.current.length > 0
+              ? editingCustomer.services.current.join(', ')
+              : 'Select services'}
+          </div>
+
+          {serviceDropdownOpen && (
+            <div
+              ref={dropdownRef}
+              className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
+            >
+              {[
+                "Totally Tasty",
+                "Cleaning and Janitorial Supplies",
+                "Business Supplies",
+                "Business Print",
+                "Managed Print",
+                "Mailroom Equipment",
+                "Secure Shredding",
+                "Workspace",
+                "Office Plants & Plant Displays",
+                "Workwear",
+                "Defibrillators",
+              ].map((service) => (
+                <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer">
                   <input
-                    type="text"
-                    placeholder="Current Services (comma separated)"
-                    value={editingCustomer.services.current.join(', ')}
-                    onChange={e =>
+                    type="checkbox"
+                    className="mr-2"
+                    checked={editingCustomer.services.current.includes(service)}
+                    onChange={() => {
+                      const isChecked = editingCustomer.services.current.includes(service);
+                      const updated = isChecked
+                        ? editingCustomer.services.current.filter((s) => s !== service)
+                        : [...editingCustomer.services.current, service];
                       setEditingCustomer({
                         ...editingCustomer,
                         services: {
                           ...editingCustomer.services,
-                          current: e.target.value.split(',').map(s => s.trim()),
+                          current: updated,
                         },
-                      })
-                    }
-                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                      });
+                    }}
                   />
+                  {service}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+                  {/* {[
+                    ['Full Name', 'name'],
+                    ['Company', 'company'],
+                    ['Duration (e.g. 2 years)', 'duration'],
+                    ['Email Address', 'email'],
+                    ['Phone Number', 'phone'],
+                    ['Payment Info', 'paymentInfo'],
+                    ['Customer VAT Code', 'vatCode'],
+                  ].map(([placeholder, field]) => (
+                    <input
+                      key={field}
+                      type="text"
+                      placeholder={placeholder}
+                      value={editingCustomer[field as keyof Customer] as string}
+                      onChange={e => setEditingCustomer({ ...editingCustomer, [field]: e.target.value })}
+                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                    />
+                  ))} */}
+
+                  
                   <input
                     type="text"
                     placeholder="Past Services (comma separated)"
