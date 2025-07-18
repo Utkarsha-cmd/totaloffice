@@ -98,13 +98,20 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
        
         try {
           // First try to get user profile using their email
-          const response = await axios.get(`http://localhost:5000/api/users?contact=${encodeURIComponent(authUser.email)}`, {
+          const response = await axios.get(`http://localhost:5000/api/users?search=${encodeURIComponent(authUser.email)}`, {
             headers: {
               Authorization: `Bearer ${authUser.token}`
             }
           });
          
-          const userData = response.data[0]; // Response is an array
+          // Find the exact match for the logged-in user's email
+          const userData = Array.isArray(response.data) 
+            ? response.data.find(user => 
+                (user.email && user.email.toLowerCase() === authUser.email.toLowerCase()) ||
+                (user.contact && user.contact.toLowerCase() === authUser.email.toLowerCase())
+              )
+            : null;
+
           console.log('User profile data:', userData);
          
           if (userData) {
@@ -116,11 +123,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               ? `${userData.firstName} ${userData.lastName}`.trim()
               : userData.name || prev.name || '';
               
+            // Get the correct email (prioritize email over contact)
+            const userEmail = userData.email || userData.contact || prev.email || '';
+            
             // Update customer info with the profile data
             setCustomerInfo(prev => ({
               ...prev, // Keep any existing values
               name: fullName,
-              email: userData.contact || userData.email || prev.email || '',
+              email: userEmail,
               phone: userData.phone || userData.company || prev.phone || '',
               address: {
                 street: userData.billingAddress ? (Array.isArray(userData.billingAddress) ? userData.billingAddress[0] || '' : userData.billingAddress.split(',')[0] || '') : prev.address.street,
