@@ -6,18 +6,22 @@ const API_URL = 'http://localhost:5000/api/users';
 // Define User interface to match backend model
 export interface User {
   _id?: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
   company: string;
+  vatCode?: string;
   duration: string;
   services: {
     current: string[];
     past: string[];
   };
   document?: string | null;
-  contact: string;
   billingAddress: string;
   paymentInfo: string;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Configure axios with auth headers
@@ -132,7 +136,7 @@ const deleteUser = async (id: string) => {
 // Get user by email
 const getUserByEmail = async (email: string) => {
   try {
-    const response = await axios.get(`${API_URL}?contact=${encodeURIComponent(email)}`, {
+    const response = await axios.get(`${API_URL}?email=${encodeURIComponent(email)}`, {
       headers: getAuthHeader()
     });
     

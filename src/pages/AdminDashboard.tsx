@@ -27,14 +27,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
     firstName: '',
     lastName: '',
-    vatCode: '',
-    name: '',
+    email: '',
+    phone: '',
     company: '',
+    vatCode: '',
     duration: '',
     services: { current: [], past: [] },
     document: null,
-    email: '',
-    phone: '',
     billingAddress: '',
     paymentInfo: '',
   });
@@ -149,27 +148,36 @@ useEffect(() => {
     }
   };
 
-  const handleAddCustomer = async () => {
+  const handleAddCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (!newCustomer.firstName || !newCustomer.email) {
+      setError('First name and email are required');
+      return;
+    }
+    
     try {
-      // Validate email if contact is provided
-      if (newCustomer.contact) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(newCustomer.contact)) {
-          setError('Please enter a valid email address for contact');
-          return;
-        }
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newCustomer.email)) {
+        setError('Please enter a valid email address');
+        return;
       }
 
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('name', `${newCustomer.firstName} ${newCustomer.lastName}`);
-      formData.append('vatCode', newCustomer.vatCode);
-      formData.append('company', newCustomer.company);
-      formData.append('duration', newCustomer.duration);
-      formData.append('services', JSON.stringify(newCustomer.services));
-      formData.append('contact', `${newCustomer.email} | ${newCustomer.phone}`);
-      formData.append('billingAddress', newCustomer.billingAddress);
-      formData.append('paymentInfo', newCustomer.paymentInfo);
+      formData.append('firstName', newCustomer.firstName);
+      // Ensure lastName is always sent, default to empty string if not provided
+      formData.append('lastName', newCustomer.lastName || '');
+      formData.append('email', newCustomer.email);
+      formData.append('phone', newCustomer.phone || '');
+      formData.append('company', newCustomer.company || '');
+      formData.append('vatCode', newCustomer.vatCode || '');
+      formData.append('duration', newCustomer.duration || '');
+      formData.append('services', JSON.stringify(newCustomer.services || { current: [], past: [] }));
+      formData.append('billingAddress', newCustomer.billingAddress || '');
+      formData.append('paymentInfo', newCustomer.paymentInfo || '');
       
       if (newCustomer.document) {
         formData.append('document', newCustomer.document);
@@ -182,12 +190,15 @@ useEffect(() => {
       
       // Reset form
       setNewCustomer({
-        name: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
         company: '',
+        vatCode: '',
         duration: '',
         services: { current: [], past: [] },
         document: null,
-        contact: '',
         billingAddress: '',
         paymentInfo: '',
       });
@@ -195,6 +206,7 @@ useEffect(() => {
       setAddressSuggestions([]);
       setShowAddForm(false);
     } catch (err: any) {
+      console.error('Error adding customer:', err);
       setError(err.message || 'Failed to add user');
     }
   };
@@ -202,40 +214,60 @@ useEffect(() => {
   const handleEditCustomer = (customer: UserWithFile) => {
     setEditingCustomer({
       ...customer,
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      company: customer.company || '',
+      vatCode: customer.vatCode || '',
+      duration: customer.duration || '',
       services: {
         current: [...(customer.services?.current || [])],
         past: [...(customer.services?.past || [])]
-      }
+      },
+      billingAddress: customer.billingAddress || '',
+      paymentInfo: customer.paymentInfo || '',
+      document: customer.document || null
     });
     setShowEditForm(true);
     setShowAddForm(false);
   };
 
   const handleUpdateCustomer = async () => {
-    if (!editingCustomer || !editingCustomer._id) return;
-
+    if (!editingCustomer) return;
+    
     try {
-      // Validate email if contact is provided
-      if (editingCustomer.contact) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(editingCustomer.contact)) {
-          setError('Please enter a valid email address for contact');
-          return;
-        }
-      }
-
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('name', editingCustomer.name);
-      formData.append('company', editingCustomer.company);
-      formData.append('duration', editingCustomer.duration);
-      formData.append('services', JSON.stringify(editingCustomer.services));
-      formData.append('contact', editingCustomer.contact);
-      formData.append('billingAddress', editingCustomer.billingAddress);
-      formData.append('paymentInfo', editingCustomer.paymentInfo);
+      setLoading(true);
+      setError('');
       
-      if (editingCustomer.document && editingCustomer.document instanceof File) {
-        formData.append('document', editingCustomer.document);
+      const formData = new FormData();
+      
+      // Add all user fields to form data
+      const { document: doc, services, ...rest } = editingCustomer;
+      
+      // Ensure required fields are always included
+      const userData = {
+        ...rest,
+        // Ensure lastName is always included, default to empty string if not provided
+        lastName: rest.lastName || '',
+        // Ensure other required fields have defaults if needed
+        services: services || { current: [], past: [] }
+      };
+      
+      // Add all non-null/undefined fields to form data
+      Object.entries(userData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          if (key === 'services') {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      
+      // Add document file if it exists and is a File object
+      if (doc && doc instanceof File) {
+        formData.append('document', doc);
       }
       
       await userService.updateUser(editingCustomer._id, formData);
@@ -247,7 +279,10 @@ useEffect(() => {
       setEditingCustomer(null);
       setShowEditForm(false);
     } catch (err: any) {
+      console.error('Error updating customer:', err);
       setError(err.message || 'Failed to update user');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -295,11 +330,18 @@ useEffect(() => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.contact.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers.filter(customer => {
+    const searchLower = searchTerm.toLowerCase();
+    const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
+    
+    return (
+      fullName.includes(searchLower) ||
+      (customer.email || '').toLowerCase().includes(searchLower) ||
+      (customer.phone || '').toLowerCase().includes(searchLower) ||
+      (customer.company || '').toLowerCase().includes(searchLower) ||
+      (customer.billingAddress || '').toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -493,12 +535,12 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* 2. Full Name */}
+        {/* 2. First Name */}
         <input
           type="text"
-          placeholder="Full Name"
-          value={newCustomer.name}
-          onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+          placeholder="First Name"
+          value={newCustomer.firstName}
+          onChange={e => setNewCustomer({ ...newCustomer, firstName: e.target.value })}
           className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
         />
 
@@ -740,12 +782,12 @@ useEffect(() => {
                       />
                     </div>
                   </div>
-                   {/* 2. Full Name */}
+                   {/* 2. First Name */}
         <input
           type="text"
-          placeholder="Full Name"
-          value={editingCustomer.name}
-          onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+          placeholder="First Name"
+          value={editingCustomer.firstName || ''}
+          onChange={e => setEditingCustomer({ ...editingCustomer, firstName: e.target.value })}
           className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
         />
 
@@ -965,27 +1007,27 @@ useEffect(() => {
               <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
                 {activeTab === 'details' ? (
                   <>
-                    <h2 className="text-xl font-semibold text-green-800">{customer.name}</h2>
+                    <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div>
                         <p className="text-sm font-medium text-gray-700">Company</p>
-                        <p className="text-sm text-gray-600">{customer.company}</p>
+                        <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
+                        
+                        <p className="text-sm font-medium text-gray-700">Email</p>
+                        <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
+                        
+                        <p className="text-sm font-medium text-gray-700">Phone</p>
+                        <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
+                        
+                        <p className="text-sm font-medium text-gray-700">VAT Code</p>
+                        <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Service Duration</p>
-                        <p className="text-sm text-gray-600">{customer.duration}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Contact</p>
-                        <p className="text-sm text-gray-600">{customer.contact}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Billing Address</p>
-                        <p className="text-sm text-gray-600">{customer.billingAddress}</p>
-                      </div>
-                      <div className="md:col-span-2">
                         <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                        <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
+                        <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
+                        
+                        <p className="text-sm font-medium text-gray-700">Billing Address</p>
+                        <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
                       </div>
                     </div>
                     <div className="mt-4">
@@ -1056,8 +1098,8 @@ useEffect(() => {
                   <>
                     <div className="flex justify-between items-start">
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-800">{customer.name}</h2>
-                        <p className="text-sm text-gray-600">{customer.company}</p>
+                        <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
+                        <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
                       </div>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         {customer.duration}

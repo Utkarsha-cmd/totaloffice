@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus } from 'lucide-react';
+import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus, Building2 } from 'lucide-react';
 import axios from 'axios';
 import { authService } from '@/services/authService';
  
@@ -74,7 +74,10 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     },
   });
  
-  const [editedInfo, setEditedInfo] = useState<CustomerInfo>(customerInfo);
+  const [editedInfo, setEditedInfo] = useState<CustomerInfo>(() => ({
+    ...customerInfo,
+    address: { ...customerInfo.address }
+  }));
   const [document, setDocument] = useState<File | undefined>(undefined);
  
   // Fetch current authenticated user and their profile
@@ -108,18 +111,24 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             // Set the complete user profile
             setUserProfile(userData);
            
+            // Combine firstName and lastName for display
+            const fullName = userData.firstName && userData.lastName 
+              ? `${userData.firstName} ${userData.lastName}`.trim()
+              : userData.name || prev.name || '';
+              
             // Update customer info with the profile data
-            setCustomerInfo({
-              name: userData.name,
-              email: userData.contact, // Email stored as contact
-              phone: userData.company, // Company field used as phone
+            setCustomerInfo(prev => ({
+              ...prev, // Keep any existing values
+              name: fullName,
+              email: userData.contact || userData.email || prev.email || '',
+              phone: userData.phone || userData.company || prev.phone || '',
               address: {
-                street: userData.billingAddress ? userData.billingAddress.split(',')[0] || '' : '',
-                city: userData.billingAddress ? userData.billingAddress.split(',')[1] || '' : '',
-                state: userData.billingAddress ? userData.billingAddress.split(',')[2] || '' : '',
-                zipCode: userData.billingAddress ? userData.billingAddress.split(',')[3] || '' : '',
+                street: userData.billingAddress ? (Array.isArray(userData.billingAddress) ? userData.billingAddress[0] || '' : userData.billingAddress.split(',')[0] || '') : prev.address.street,
+                city: userData.billingAddress ? (Array.isArray(userData.billingAddress) ? userData.billingAddress[1] || '' : userData.billingAddress.split(',')[1] || '') : prev.address.city,
+                state: userData.billingAddress ? (Array.isArray(userData.billingAddress) ? userData.billingAddress[2] || '' : userData.billingAddress.split(',')[2] || '') : prev.address.state,
+                zipCode: userData.billingAddress ? (Array.isArray(userData.billingAddress) ? userData.billingAddress[3] || '' : userData.billingAddress.split(',')[3] || '') : prev.address.zipCode,
               },
-            });
+            }));
           } else {
             setError('User profile not found. Please contact support.');
           }
@@ -149,7 +158,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
  
   // Update editedInfo when customerInfo changes
   useEffect(() => {
-    setEditedInfo(customerInfo);
+    setEditedInfo(prev => ({
+      ...prev,
+      ...customerInfo,
+      address: {
+        ...prev.address,
+        ...customerInfo.address
+      }
+    }));
   }, [customerInfo]);
  
   const handleEdit = () => {
@@ -499,12 +515,35 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.email}</p>
                 )}
               </div>
- 
-              {/* Phone */}
-              <div className="space-y-2 md:col-span-2">
+
+              {/* Company - Full width */}
+              <div className="space-y-2">
+                <Label htmlFor="company" className="flex items-center gap-2 text-black">
+                  <Building2 className="w-4 h-4 text-green-500" />
+                  Company
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="company"
+                    value={userProfile?.company || ''}
+                    onChange={(e) => {
+                      if (userProfile) {
+                        setUserProfile({...userProfile, company: e.target.value});
+                      }
+                    }}
+                    className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                    placeholder="Enter company name"
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{userProfile?.company || 'Not specified'}</p>
+                )}
+              </div>
+
+              {/* Phone - Full width */}
+              <div className="space-y-2">
                 <Label htmlFor="phone" className="flex items-center gap-2 text-black">
                   <Phone className="w-4 h-4 text-green-500" />
-                  Company
+                  Phone
                 </Label>
                 {isEditing ? (
                   <Input
@@ -515,7 +554,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     placeholder="Enter phone number"
                   />
                 ) : (
-                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.phone}</p>
+                  <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.phone || 'Not specified'}</p>
                 )}
               </div>
             </div>
