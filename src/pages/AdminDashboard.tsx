@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Users, Clock, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Order } from '../hooks/order';
+import { orderService } from '../hooks/orderservice';
+import OrderCard from '../components/OrderCard';
 
 interface AdminDashboardProps {
   username: string;
@@ -10,11 +13,11 @@ interface AdminDashboardProps {
 
 import { User, userService } from '../services/userService';
 
-// Extended User interface for frontend use
 interface UserWithFile extends Omit<User, 'document'> {
   document?: File | null;
   _id?: string;
 }
+
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onLogout }) => {
   const [customers, setCustomers] = useState<UserWithFile[]>([]);
@@ -22,7 +25,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'orders'>('details');;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
     firstName: '',
@@ -40,7 +43,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   
   const [editingCustomer, setEditingCustomer] = useState<UserWithFile | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
-  
+  const [orders, setOrders] = useState<Order[]>([]);
   const [postcode, setPostcode] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
@@ -70,8 +73,6 @@ useEffect(() => {
     try {
       const formattedPostcode = postcode.replace(/\s+/g, '').toUpperCase();
       const apiKey = 'pdSw7G1TEk6kghR1DNzddQ41182';
-      
-      // First get the full address details for the postcode
       const lookupResponse = await fetch(
         `https://api.getaddress.io/find/${encodeURIComponent(formattedPostcode)}?api-key=${apiKey}&expand=true`
       );
@@ -79,13 +80,9 @@ useEffect(() => {
       if (!lookupResponse.ok) {
         throw new Error('Address lookup failed');
       }
-      
       const data = await lookupResponse.json();
-      
-      // Format the addresses for display
       if (data.addresses && data.addresses.length > 0) {
         const formattedAddresses = data.addresses.map((addr: any) => {
-          // Format address components into a readable string
           const parts = [
             addr.line_1,
             addr.line_2,
@@ -100,7 +97,6 @@ useEffect(() => {
         
         setAddressSuggestions(formattedAddresses);
       } else {
-        // Fallback to autocomplete if no direct matches
         const autoCompleteResponse = await fetch(
           `https://api.getaddress.io/autocomplete/${encodeURIComponent(formattedPostcode)}?api-key=${apiKey}`
         );
@@ -138,6 +134,7 @@ useEffect(() => {
   const navigation = [
     { name: 'User Details', icon: Users, tab: 'details', current: activeTab === 'details' },
     { name: 'User History', icon: Clock, tab: 'history', current: activeTab === 'history' },
+    { name: 'Orders', tab: 'orders',  icon: Package, current: activeTab === 'orders' },
   ];
 
   const handleDownloadCSV = async () => {
@@ -150,25 +147,20 @@ useEffect(() => {
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Basic validation
     if (!newCustomer.firstName || !newCustomer.email) {
       setError('First name and email are required');
       return;
     }
     
     try {
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newCustomer.email)) {
         setError('Please enter a valid email address');
         return;
       }
 
-      // Create FormData for file upload
       const formData = new FormData();
       formData.append('firstName', newCustomer.firstName);
-      // Ensure lastName is always sent, default to empty string if not provided
       formData.append('lastName', newCustomer.lastName || '');
       formData.append('email', newCustomer.email);
       formData.append('phone', newCustomer.phone || '');
@@ -184,11 +176,7 @@ useEffect(() => {
       }
       
       await userService.createUser(formData);
-      
-      // Refresh customer list
       fetchCustomers();
-      
-      // Reset form
       setNewCustomer({
         firstName: '',
         lastName: '',
@@ -210,6 +198,145 @@ useEffect(() => {
       setError(err.message || 'Failed to add user');
     }
   };
+  const mockOrders: Order[] = [
+  {
+    _id: 'order1',
+    orderNumber: 'ORD-1001',
+    customerId: '1',
+    customerName: 'John Smith',
+    customerEmail: 'john.smith@company.com',
+    items: [
+      {
+        id: 'item1',
+        name: 'Cleaning Supplies',
+        category: 'Janitorial',
+        quantity: 2,
+        price: 49.99,
+      },
+      {
+        id: 'item2',
+        name: 'Business Cards',
+        category: 'Print',
+        quantity: 1,
+        price: 19.99,
+      }
+    ],
+    subtotal: 119.97,
+    tax: 10.00,
+    shipping: 5.00,
+    total: 134.97,
+    status: 'pending',
+    shippingAddress: {
+      firstName: 'John',
+      lastName: 'Smith',
+      street: '123 Business Park Drive',
+      city: 'Manchester',
+      state: '',
+      postalCode: 'M3 1SH',
+      country: 'UK',
+      phone: '+44 161 123 4567'
+    },
+    billingAddress: {
+      firstName: 'John',
+      lastName: 'Smith',
+      street: '123 Business Park Drive',
+      city: 'Manchester',
+      state: '',
+      postalCode: 'M3 1SH',
+      country: 'UK',
+      phone: '+44 161 123 4567'
+    },
+    paymentMethod: 'Credit Card',
+    trackingNumber: 'TRK123456',
+    orderDate: '2025-07-17T10:30:00Z',
+    estimatedDelivery: '2025-07-22T00:00:00Z',
+    notes: 'Leave at reception.'
+  },
+  {
+    _id: 'order2',
+    orderNumber: 'ORD-1002',
+    customerId: '2',
+    customerName: 'Sarah Johnson',
+    customerEmail: 'sarah.johnson@innovate.co.uk',
+    items: [
+      {
+        id: 'item3',
+        name: 'Totally Tasty Snack Box',
+        category: 'Food',
+        quantity: 3,
+        price: 29.99,
+      }
+    ],
+    subtotal: 89.97,
+    tax: 7.50,
+    shipping: 4.00,
+    total: 101.47,
+    status: 'shipped',
+    shippingAddress: {
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      street: '456 Innovation Way',
+      city: 'Birmingham',
+      state: '',
+      postalCode: 'B1 2AA',
+      country: 'UK',
+      phone: '+44 121 456 7890'
+    },
+    billingAddress: {
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      street: '456 Innovation Way',
+      city: 'Birmingham',
+      state: '',
+      postalCode: 'B1 2AA',
+      country: 'UK',
+      phone: '+44 121 456 7890'
+    },
+    paymentMethod: 'Bank Transfer',
+    orderDate: '2025-07-15T15:00:00Z',
+    estimatedDelivery: '2025-07-20T00:00:00Z'
+  }
+];
+const fetchOrders = async () => {
+  setLoading(true);
+  try {
+    setOrders(mockOrders); 
+  } catch (err: any) {
+    setError(err.message || 'Failed to fetch orders');
+    setOrders([]);
+  } finally {
+    setLoading(false);
+  }
+};
+ useEffect(() => {
+  if (activeTab === 'orders') {
+    fetchOrders();
+  }
+}, [activeTab]);
+
+    const handleStatusUpdate = async (orderId: string, status: Order['status']) => {
+    try {
+      await orderService.updateOrderStatus(orderId, status);
+      fetchOrders(); 
+    } catch (err: any) {
+      setError(err.message || 'Failed to update order status');
+    }
+  };
+  
+  // const fetchOrders = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError('');
+  //     const data = await orderService.getOrders(searchTerm);
+  //     setOrders(data);
+  //   } catch (err: any) {
+  //     console.error('Error fetching orders:', err);
+  //     setError(err.message || 'Failed to fetch orders');
+  //     setOrders([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleEditCustomer = (customer: UserWithFile) => {
     setEditingCustomer({
@@ -241,20 +368,13 @@ useEffect(() => {
       setError('');
       
       const formData = new FormData();
-      
-      // Add all user fields to form data
       const { document: doc, services, ...rest } = editingCustomer;
-      
-      // Ensure required fields are always included
       const userData = {
         ...rest,
-        // Ensure lastName is always included, default to empty string if not provided
         lastName: rest.lastName || '',
-        // Ensure other required fields have defaults if needed
         services: services || { current: [], past: [] }
       };
       
-      // Add all non-null/undefined fields to form data
       Object.entries(userData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           if (key === 'services') {
@@ -265,17 +385,12 @@ useEffect(() => {
         }
       });
       
-      // Add document file if it exists and is a File object
       if (doc && doc instanceof File) {
         formData.append('document', doc);
       }
       
       await userService.updateUser(editingCustomer._id, formData);
-      
-      // Refresh customer list
       fetchCustomers();
-      
-      // Reset form
       setEditingCustomer(null);
       setShowEditForm(false);
     } catch (err: any) {
@@ -292,8 +407,6 @@ useEffect(() => {
       setLoading(true);
       setError('');
       const data = await userService.getUsers(searchTerm);
-      
-      // Ensure data is always an array
       if (Array.isArray(data)) {
         setCustomers(data);
       } else {
@@ -303,7 +416,7 @@ useEffect(() => {
     } catch (err: any) {
       console.error('Error in fetchCustomers:', err);
       setError(err.message || 'Failed to fetch users');
-      setCustomers([]); // Set empty array on error
+      setCustomers([]); 
     } finally {
       setLoading(false);
     }
@@ -314,14 +427,13 @@ useEffect(() => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await userService.deleteUser(id);
-        fetchCustomers(); // Refresh list after deletion
+        fetchCustomers(); 
       } catch (err: any) {
         setError(err.message || 'Failed to delete user');
       }
     }
   };
 
-  // Effect to fetch customers on component mount and when search term changes
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchCustomers();
@@ -371,7 +483,7 @@ useEffect(() => {
             {navigation.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab as 'details' | 'history')}
+                onClick={() => setActiveTab(item.tab as 'details' | 'history' | 'orders')}
                 className={cn(
                   item.current
                     ? 'bg-green-50 text-green-700 border-r-4 border-green-600'
@@ -421,7 +533,7 @@ useEffect(() => {
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'details' ? 'Customer Details' : 'Customer History'}
+                {activeTab === 'details' ? 'Customer Details' : activeTab === 'history' ? 'Customer History': 'Orders'}
               </h1>
             </div>
 
@@ -465,7 +577,181 @@ useEffect(() => {
               className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
             />
           </div>
-
+            {/* Content based on active tab */}
+            {activeTab === 'orders' ? (
+              // Orders tab content
+              <div>
+                {loading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-400"></div>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-30 text-gray-400" />
+                    <p className="text-lg">No orders found</p>
+                    <p className="text-sm">Orders will appear here when customers make purchases.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {orders.map((order) => (
+                      <OrderCard 
+                        key={order._id} 
+                        order={order} 
+                        onStatusUpdate={handleStatusUpdate}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Customer details/history tabs
+              <div>
+                {filteredCustomers.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    No customers found. Add a new customer to get started.
+                  </div>
+                ) : (
+                  <div className="grid gap-6">
+                    {filteredCustomers.map((customer) => (
+                      <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
+                        {activeTab === 'details' ? (
+                          <>
+                            <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Company</p>
+                                <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
+                                
+                                <p className="text-sm font-medium text-gray-700">Email</p>
+                                <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
+                                
+                                <p className="text-sm font-medium text-gray-700">Phone</p>
+                                <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
+                                
+                                <p className="text-sm font-medium text-gray-700">VAT Code</p>
+                                <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Payment Info</p>
+                                <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
+                                
+                                <p className="text-sm font-medium text-gray-700">Billing Address</p>
+                                <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="mt-4">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
+                                  <ul className="list-disc list-inside">
+                                    {customer.services && customer.services.current && customer.services.current.length > 0 ? (
+                                      customer.services.current.map((service, i) => (
+                                        <li key={i} className="text-sm text-gray-700">{service}</li>
+                                      ))
+                                    ) : (
+                                      <li className="text-sm text-gray-400">No current services</li>
+                                    )}
+                                  </ul>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700  mb-1">Past Services</p>
+                                  <ul className="list-disc list-inside">
+                                    {customer.services && customer.services.past && customer.services.past.length > 0 ? (
+                                      customer.services.past.map((service, i) => (
+                                        <li key={i} className="text-sm text-gray-500">{service}</li>
+                                      ))
+                                    ) : (
+                                      <li className="text-sm text-gray-400">No past services</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                            {customer.document && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-700">Document</p>
+                        {typeof customer.document === 'string' ? (
+                          <a 
+                            href={`http://localhost:5000${customer.document}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View Document
+                          </a>
+                        ) : (
+                          <p className="text-sm text-blue-600">{customer.document.name}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-4 right-4 flex space-x-2">
+                      <button
+                        onClick={() => handleEditCustomer(customer)}
+                        className="text-blue-500 hover:text-blue-700 text-sm mr-2"
+                        title="Edit Customer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCustomer(customer._id || '')}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                        title="Delete Customer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
+                                <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
+                              </div>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                {customer.duration}
+                              </span>
+                            </div>
+                            
+                            <div className="mt-4 space-y-3">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Payment Information</p>
+                                <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
+                              </div>
+                          
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-sm font-medium text-green-700">Current Services</p>
+                                  <ul className="mt-1 space-y-1">
+                                    {customer.services.current.map((service, i) => (
+                                      <li key={i} className="text-sm text-gray-700">• {service}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Service History</p>
+                                  <ul className="mt-1 space-y-1">
+                                    {customer.services.past.map((service, i) => (
+                                      <li key={i} className="text-sm text-gray-500">• {service}</li>
+                                    ))}
+                                    {customer.services.past.length === 0 && (
+                                      <li className="text-sm text-gray-400">No past services</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           {showAddForm && (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
@@ -712,8 +998,6 @@ useEffect(() => {
     </div>
   </div>
 )}
-
-
           {showEditForm && editingCustomer && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
@@ -993,156 +1277,8 @@ useEffect(() => {
             </div>
           )}
 
-          {loading ? (
-            <div className="flex justify-center items-center h-40">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-            </div>
-          ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-              No customers found. Add a new customer to get started.
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {filteredCustomers.map((customer) => (
-              <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
-                {activeTab === 'details' ? (
-                  <>
-                    <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Company</p>
-                        <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
-                        
-                        <p className="text-sm font-medium text-gray-700">Email</p>
-                        <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
-                        
-                        <p className="text-sm font-medium text-gray-700">Phone</p>
-                        <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
-                        
-                        <p className="text-sm font-medium text-gray-700">VAT Code</p>
-                        <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                        <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
-                        
-                        <p className="text-sm font-medium text-gray-700">Billing Address</p>
-                        <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
-                          <ul className="list-disc list-inside">
-                            {customer.services && customer.services.current && customer.services.current.length > 0 ? (
-                              customer.services.current.map((service, i) => (
-                                <li key={i} className="text-sm text-gray-700">{service}</li>
-                              ))
-                            ) : (
-                              <li className="text-sm text-gray-400">No current services</li>
-                            )}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Past Services</p>
-                          <ul className="list-disc list-inside">
-                            {customer.services && customer.services.past && customer.services.past.length > 0 ? (
-                              customer.services.past.map((service, i) => (
-                                <li key={i} className="text-sm text-gray-500">{service}</li>
-                              ))
-                            ) : (
-                              <li className="text-sm text-gray-400">No past services</li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    {customer.document && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700">Document</p>
-                        {typeof customer.document === 'string' ? (
-                          <a 
-                            href={`http://localhost:5000${customer.document}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            View Document
-                          </a>
-                        ) : (
-                          <p className="text-sm text-blue-600">{customer.document.name}</p>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="absolute top-4 right-4 flex space-x-2">
-                      <button
-                        onClick={() => handleEditCustomer(customer)}
-                        className="text-blue-500 hover:text-blue-700 text-sm mr-2"
-                        title="Edit Customer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCustomer(customer._id || '')}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                        title="Delete Customer"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
-                        <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {customer.duration}
-                      </span>
-                    </div>
-                    
-                    <div className="mt-4 space-y-3">
-                      <div>
-                            <p className="text-sm font-medium text-gray-700">Payment Information</p>
-                            <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
-                          </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-green-700">Current Services</p>
-                          <ul className="mt-1 space-y-1">
-                            {customer.services.current.map((service, i) => (
-                              <li key={i} className="text-sm text-gray-700">• {service}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Service History</p>
-                          <ul className="mt-1 space-y-1">
-                            {customer.services.past.map((service, i) => (
-                              <li key={i} className="text-sm text-gray-500">• {service}</li>
-                            ))}
-                            {customer.services.past.length === 0 && (
-                              <li className="text-sm text-gray-400">No past services</li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
-    </div>
   );
 };
 
