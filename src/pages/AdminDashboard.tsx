@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw} from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Order } from '../hooks/order';
 import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
@@ -24,7 +25,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'orders'>('details');;
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'history' | 'orders'>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
     firstName: '',
@@ -51,6 +52,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Dashboard data
+  const [dashboardStats, setDashboardStats] = useState({
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalServices: 11,
+    ordersReceived: 0,
+    ordersDelivered: 0
+  });
+
+  // Mock chart data - replace with real data from your API
+  const weeklyData = [
+    { name: 'Mon', orders: 12, delivered: 8 },
+    { name: 'Tue', orders: 19, delivered: 15 },
+    { name: 'Wed', orders: 8, delivered: 6 },
+    { name: 'Thu', orders: 25, delivered: 20 },
+    { name: 'Fri', orders: 18, delivered: 14 },
+    { name: 'Sat', orders: 14, delivered: 12 },
+    { name: 'Sun', orders: 9, delivered: 7 }
+  ];
+
+  const monthlyData = [
+    { name: 'Jan', orders: 145, delivered: 120 },
+    { name: 'Feb', orders: 165, delivered: 140 },
+    { name: 'Mar', orders: 132, delivered: 115 },
+    { name: 'Apr', orders: 178, delivered: 155 },
+    { name: 'May', orders: 195, delivered: 170 },
+    { name: 'Jun', orders: 210, delivered: 185 }
+  ];
+
+  const serviceDistribution = [
+    { name: 'Totally Tasty', value: 35, color: '#10b981' },
+    { name: 'Cleaning Supplies', value: 25, color: '#34d399' },
+    { name: 'Business Supplies', value: 20, color: '#6ee7b7' },
+    { name: 'Print Services', value: 12, color: '#a7f3d0' },
+    { name: 'Others', value: 8, color: '#d1fae5' }
+  ];
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -66,6 +104,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
       fetchOrders();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const ordersData = await orderService.getOrders();
+      const customersData = await userService.getUsers('');
+      
+      setDashboardStats({
+        totalOrders: ordersData.length,
+        totalCustomers: customersData.length,
+        totalServices: 11,
+        ordersReceived: ordersData.filter(order => ['pending', 'confirmed', 'delivered'].includes(order.status)).length,
+        ordersDelivered: ordersData.filter(order => order.status === 'delivered').length
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    }
+  };
 
   const handlePostcodeLookup = async () => {
     if (!postcode.trim()) {
@@ -138,6 +197,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   };
 
   const navigation = [
+    { name: 'Dashboard', icon: LayoutDashboard, tab: 'dashboard', current: activeTab === 'dashboard' },
     { name: 'User Details', icon: Users, tab: 'details', current: activeTab === 'details' },
     { name: 'User History', icon: Clock, tab: 'history', current: activeTab === 'history' },
     { name: 'Orders', tab: 'orders',  icon: Package, current: activeTab === 'orders' },
@@ -342,6 +402,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
     );
   });
 
+  // Dashboard Statistics Cards Component
+  const DashboardStats = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-green-600 text-sm font-medium">Total Orders</p>
+            <p className="text-2xl font-bold text-green-800">{dashboardStats.totalOrders}</p>
+          </div>
+          <ShoppingCart className="h-8 w-8 text-green-600" />
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-green-600 text-sm font-medium">Total Customers</p>
+            <p className="text-2xl font-bold text-green-800">{dashboardStats.totalCustomers}</p>
+          </div>
+          <UserCheck className="h-8 w-8 text-green-600" />
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-green-600 text-sm font-medium">Total Services</p>
+            <p className="text-2xl font-bold text-green-800">{dashboardStats.totalServices}</p>
+          </div>
+          <Package className="h-8 w-8 text-green-600" />
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-green-600 text-sm font-medium">Orders Received</p>
+            <p className="text-2xl font-bold text-green-800">{dashboardStats.ordersReceived}</p>
+          </div>
+          <TrendingUp className="h-8 w-8 text-green-600" />
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-green-600 text-sm font-medium">Orders Delivered</p>
+            <p className="text-2xl font-bold text-green-800">{dashboardStats.ordersDelivered}</p>
+          </div>
+          <CheckCircle className="h-8 w-8 text-green-600" />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -370,7 +485,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             {navigation.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab as 'details' | 'history' | 'orders')}
+                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'history' | 'orders')}
                 className={cn(
                   item.current
                     ? 'bg-green-50 text-green-700 border-r-4 border-green-600'
@@ -420,24 +535,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'details' ? 'Customer Details' : activeTab === 'history' ? 'Customer History': 'Orders'}
+                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'history' ? 'Customer History': 'Orders'}
               </h1>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              >
-                Add Customer
-              </button>
-              <button
-                onClick={handleDownloadCSV}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              >
-                Export CSV
-              </button>
-            </div>
+            {activeTab !== 'dashboard' && (
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Add Customer
+                </button>
+                <button
+                  onClick={handleDownloadCSV}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Export CSV
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -455,461 +572,327 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             </div>
           )}
           
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search by name or company..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-            />
-          </div>
-            {/* Content based on active tab */}
-            {activeTab === 'orders' ? (
-              // Orders tab content
-              <div className="space-y-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800">Order Management</h2>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Search orders..."
-                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                    <button 
-                      onClick={fetchOrders}
-                      className="p-1.5 text-gray-500 hover:text-gray-700"
-                      title="Refresh orders"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
-                    </button>
+          {/* Dashboard Content */}
+          {activeTab === 'dashboard' ? (
+            <div className="space-y-6">
+              <DashboardStats />
+              
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Weekly Orders Chart */}
+                <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
+                  <h3 className="text-lg font-semibold text-green-800 mb-4">Weekly Orders Overview</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={weeklyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#f0fdf4', 
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '8px'
+                        }} 
+                      />
+                      <Bar dataKey="orders" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="delivered" fill="#34d399" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Monthly Trend Chart */}
+                <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
+                  <h3 className="text-lg font-semibold text-green-800 mb-4">Monthly Trend</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#f0fdf4', 
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '8px'
+                        }} 
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="orders" 
+                        stroke="#10b981" 
+                        strokeWidth={3}
+                        dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="delivered" 
+                        stroke="#34d399" 
+                        strokeWidth={3}
+                        dot={{ fill: '#34d399', strokeWidth: 2, r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Service Distribution Chart */}
+              <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
+                <h3 className="text-lg font-semibold text-green-800 mb-4">Service Distribution</h3>
+                <div className="flex flex-col lg:flex-row items-center">
+                  <div className="w-full lg:w-1/2">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={serviceDistribution}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {serviceDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="w-full lg:w-1/2 lg:pl-6">
+                    <div className="space-y-3">
+                      {serviceDistribution.map((service, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                          <div className="flex items-center">
+                            <div 
+                              className="w-4 h-4 rounded mr-3"
+                              style={{ backgroundColor: service.color }}
+                            />
+                            <span className="text-sm font-medium text-green-800">{service.name}</span>
+                          </div>
+                          <span className="text-sm text-green-600 font-semibold">{service.value}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                
-                {ordersLoading ? (
-                  <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
-                  </div>
-                ) : orders.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                    <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
-                    <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {orders.map((order) => (
-                      <OrderCard 
-                        key={order._id} 
-                        order={order} 
-                        onStatusUpdate={handleStatusUpdate}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
-            ) : (
-              // Customer details/history tabs
-              <div>
-                {filteredCustomers.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500">
-                    No customers found. Add a new customer to get started.
-                  </div>
-                ) : (
-                  <div className="grid gap-6">
-                    {filteredCustomers.map((customer) => (
-                      <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
-                        {activeTab === 'details' ? (
-                          <>
-                            <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Company</p>
-                                <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
-                                
-                                <p className="text-sm font-medium text-gray-700">Email</p>
-                                <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
-                                
-                                <p className="text-sm font-medium text-gray-700">Phone</p>
-                                <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
-                                
-                                <p className="text-sm font-medium text-gray-700">VAT Code</p>
-                                <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                                <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
-                                
-                                <p className="text-sm font-medium text-gray-700">Billing Address</p>
-                                <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
-                              </div>
-                            </div>
-                            <div className="mt-4">
-                              <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
-                                  <ul className="list-disc list-inside">
-                                    {customer.services && customer.services.current && customer.services.current.length > 0 ? (
-                                      customer.services.current.map((service, i) => (
-                                        <li key={i} className="text-sm text-gray-700">{service}</li>
-                                      ))
-                                    ) : (
-                                      <li className="text-sm text-gray-400">No current services</li>
-                                    )}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700  mb-1">Past Services</p>
-                                  <ul className="list-disc list-inside">
-                                    {customer.services && customer.services.past && customer.services.past.length > 0 ? (
-                                      customer.services.past.map((service, i) => (
-                                        <li key={i} className="text-sm text-gray-500">{service}</li>
-                                      ))
-                                    ) : (
-                                      <li className="text-sm text-gray-400">No past services</li>
-                                    )}
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                            {customer.document && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700">Document</p>
-                        {typeof customer.document === 'string' ? (
-                          <a 
-                            href={`http://localhost:5000${customer.document}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            View Document
-                          </a>
-                        ) : (
-                          <p className="text-sm text-blue-600">{customer.document.name}</p>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="absolute top-4 right-4 flex space-x-2">
-                      <button
-                        onClick={() => handleEditCustomer(customer)}
-                        className="text-blue-500 hover:text-blue-700 text-sm mr-2"
-                        title="Edit Customer"
+            </div>
+          ) : (
+            <>
+              {/* Search bar for non-dashboard tabs */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Search by name or company..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              {/* Content based on active tab */}
+              {activeTab === 'orders' ? (
+                // Orders tab content
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-800">Order Management</h2>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Search orders..."
+                        className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                      <button 
+                        onClick={fetchOrders}
+                        className="p-1.5 text-gray-500 hover:text-gray-700"
+                        title="Refresh orders"
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCustomer(customer._id || '')}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                        title="Delete Customer"
-                      >
-                        Delete
+                        <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
                       </button>
                     </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
-                                <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
-                              </div>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                {customer.duration}
-                              </span>
-                            </div>
-                            
-                            <div className="mt-4 space-y-3">
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Payment Information</p>
-                                <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
-                              </div>
-                          
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-sm font-medium text-green-700">Current Services</p>
-                                  <ul className="mt-1 space-y-1">
-                                    {customer.services.current.map((service, i) => (
-                                      <li key={i} className="text-sm text-gray-700">• {service}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">Service History</p>
-                                  <ul className="mt-1 space-y-1">
-                                    {customer.services.past.map((service, i) => (
-                                      <li key={i} className="text-sm text-gray-500">• {service}</li>
-                                    ))}
-                                    {customer.services.past.length === 0 && (
-                                      <li className="text-sm text-gray-400">No past services</li>
-                                    )}
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-          {showAddForm && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
-      <h2 className="text-xl font-semibold mb-4 text-blue-700">Add New Customer</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-
-        {/* 1. Postcode + Address */}
-        <div className="md:col-span-2 space-y-2">
-          <div className="relative">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Enter UK Postcode (e.g., M3 1SH)"
-                value={postcode}
-                onChange={e => setPostcode(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
-                className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-              />
-              <button
-                type="button"
-                onClick={handlePostcodeLookup}
-                disabled={isLoadingAddress}
-                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-              >
-                {isLoadingAddress ? 'Looking...' : 'Find'}
-              </button>
-            </div>
-
-            {isLoadingAddress ? (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
-                <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
-              </div>
-            ) : addressSuggestions.length > 0 ? (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
-                  Found {addressSuggestions.length} addresses:
+                  
+                  {ordersLoading ? (
+                    <div className="flex justify-center items-center h-40">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                      <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
+                      <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <OrderCard 
+                          key={order._id} 
+                          order={order} 
+                          onStatusUpdate={handleStatusUpdate}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {addressSuggestions.map((address, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                    onClick={() => {
-                      handleAddressSelect(address);
-                      setAddressSuggestions([]);
-                    }}
-                  >
-                    {address}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          {addressError && (
-            <p className="text-red-500 text-sm">{addressError}</p>
+              ) : (
+                // Customer details/history tabs
+                <div>
+                  {filteredCustomers.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500">
+                      No customers found. Add a new customer to get started.
+                    </div>
+                  ) : (
+                    <div className="grid gap-6">
+                      {filteredCustomers.map((customer) => (
+                        <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
+                          {activeTab === 'details' ? (
+                            <>
+                              <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Company</p>
+                                  <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
+                                  
+                                  <p className="text-sm font-medium text-gray-700">Email</p>
+                                  <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
+                                  
+                                  <p className="text-sm font-medium text-gray-700">Phone</p>
+                                  <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
+                                  
+                                  <p className="text-sm font-medium text-gray-700">VAT Code</p>
+                                  <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Payment Info</p>
+                                  <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
+                                  
+                                  <p className="text-sm font-medium text-gray-700">Billing Address</p>
+                                  <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
+                                </div>
+                              </div>
+                              <div className="mt-4">
+                                <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
+                                    <ul className="list-disc list-inside">
+                                      {customer.services && customer.services.current && customer.services.current.length > 0 ? (
+                                        customer.services.current.map((service, i) => (
+                                          <li key={i} className="text-sm text-gray-700">{service}</li>
+                                        ))
+                                      ) : (
+                                        <li className="text-sm text-gray-400">No current services</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700  mb-1">Past Services</p>
+                                    <ul className="list-disc list-inside">
+                                      {customer.services && customer.services.past && customer.services.past.length > 0 ? (
+                                        customer.services.past.map((service, i) => (
+                                          <li key={i} className="text-sm text-gray-500">{service}</li>
+                                        ))
+                                      ) : (
+                                        <li className="text-sm text-gray-400">No past services</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                              {customer.document && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700">Document</p>
+                          {typeof customer.document === 'string' ? (
+                            <a 
+                              href={`http://localhost:5000${customer.document}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              View Document
+                            </a>
+                          ) : (
+                            <p className="text-sm text-blue-600">{customer.document.name}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="absolute top-4 right-4 flex space-x-2">
+                        <button
+                          onClick={() => handleEditCustomer(customer)}
+                          className="text-blue-500 hover:text-blue-700 text-sm mr-2"
+                          title="Edit Customer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCustomer(customer._id || '')}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          title="Delete Customer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
+                                  <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
+                                </div>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                  {customer.duration}
+                                </span>
+                              </div>
+                              
+                              <div className="mt-4 space-y-3">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Payment Information</p>
+                                  <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
+                                </div>
+                            
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-green-700">Current Services</p>
+                                    <ul className="mt-1 space-y-1">
+                                      {customer.services.current.map((service, i) => (
+                                        <li key={i} className="text-sm text-gray-700">• {service}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Service History</p>
+                                    <ul className="mt-1 space-y-1">
+                                      {customer.services.past.map((service, i) => (
+                                        <li key={i} className="text-sm text-gray-500">• {service}</li>
+                                      ))}
+                                      {customer.services.past.length === 0 && (
+                                        <li className="text-sm text-gray-400">No past services</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
-            <input
-              type="text"
-              placeholder="Address will appear here after selection"
-              value={newCustomer.billingAddress}
-              onChange={e => setNewCustomer({ ...newCustomer, billingAddress: e.target.value })}
-              className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-            />
-          </div>
-        </div>
-
-        {/* 2. First Name */}
-        <input
-          type="text"
-          placeholder="First Name"
-          value={newCustomer.firstName}
-          onChange={e => setNewCustomer({ ...newCustomer, firstName: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 3. Last Name */}
-        <input
-          type="text"
-          placeholder="Last Name"
-          value={newCustomer.lastName || ''}
-          onChange={e => setNewCustomer({ ...newCustomer, lastName: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 4. Company */}
-        <input
-          type="text"
-          placeholder="Company"
-          value={newCustomer.company}
-          onChange={e => setNewCustomer({ ...newCustomer, company: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 5. Duration */}
-        <input
-          type="text"
-          placeholder="Duration (e.g. 2 years)"
-          value={newCustomer.duration}
-          onChange={e => setNewCustomer({ ...newCustomer, duration: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 6. Email */}
-        <input
-          type="text"
-          placeholder="Email Address"
-          value={newCustomer.email}
-          onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 7. Phone */}
-        <input
-          type="text"
-          placeholder="Phone Number"
-          value={newCustomer.phone}
-          onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 8. Payment Info */}
-        <input
-          type="text"
-          placeholder="Payment Info"
-          value={newCustomer.paymentInfo}
-          onChange={e => setNewCustomer({ ...newCustomer, paymentInfo: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 9. VAT Code */}
-        <input
-          type="text"
-          placeholder="Customer VAT Code"
-          value={newCustomer.vatCode}
-          onChange={e => setNewCustomer({ ...newCustomer, vatCode: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
-
-        {/* 10. Services (multi-select) */}
-                <div className="md:col-span-2 relative">
-  <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
-  <div
-    className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
-    onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
-  >
-    {newCustomer.services.current.length > 0
-      ? newCustomer.services.current.join(', ')
-      : 'Select services'}
-  </div>
-
-  {serviceDropdownOpen && (
-    <div
-      ref={dropdownRef}
-      className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
-    >
-      {[
-        "Totally Tasty",
-        "Cleaning and Janitorial Supplies",
-        "Business Supplies",
-        "Business Print",
-        "Managed Print",
-        "Mailroom Equipment",
-        "Secure Shredding",
-        "Workspace",
-        "Office Plants & Plant Displays",
-        "Workwear",
-        "Defibrillators",
-      ].map((service) => (
-        <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
-        >
-          <input
-            type="checkbox"
-            className="mr-2"
-            checked={newCustomer.services.current.includes(service)}
-            onChange={() => {
-              const isChecked = newCustomer.services.current.includes(service);
-              const updated = isChecked
-                ? newCustomer.services.current.filter((s) => s !== service)
-                : [...newCustomer.services.current, service];
-              setNewCustomer({
-                ...newCustomer,
-                services: {
-                  ...newCustomer.services,
-                  current: updated,
-                },
-              });
-            }}
-          />
-          {service}
-        </label>
-      ))}
-    </div>
-  )}
-</div>
-
-        {/* 11. Past Services */}
-        <input
-          type="text"
-          placeholder="Past Services (comma separated)"
-          onChange={e =>
-            setNewCustomer({
-              ...newCustomer,
-              services: {
-                ...newCustomer.services,
-                past: e.target.value.split(',').map(s => s.trim()),
-              },
-            })
-          }
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
-        />
-
-        {/* 12. Document Upload */}
-        <input
-          type="file"
-          accept="application/pdf,image/*"
-          onChange={e =>
-            setNewCustomer({
-              ...newCustomer,
-              document: e.target.files ? e.target.files[0] : null,
-            })
-          }
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
-        />
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => setShowAddForm(false)}
-          className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleAddCustomer}
-          className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Add Customer
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-          {showEditForm && editingCustomer && (
+          
+          {showAddForm && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
-                <h2 className="text-xl font-semibold mb-4 text-blue-700">Edit Customer</h2>
+                <h2 className="text-xl font-semibold mb-4 text-blue-700">Add New Customer</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Postcode Lookup */}
-                  <div className="space-y-2">
+
+                  {/* 1. Postcode + Address */}
+                  <div className="md:col-span-2 space-y-2">
                     <div className="relative">
                       <div className="flex gap-2">
                         <input
@@ -929,8 +912,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                           {isLoadingAddress ? 'Looking...' : 'Find'}
                         </button>
                       </div>
-                      
-                      {/* Address Dropdown */}
+
                       {isLoadingAddress ? (
                         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
                           <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
@@ -945,7 +927,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                               key={index}
                               className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                               onClick={() => {
-                                setEditingCustomer({...editingCustomer, billingAddress: address});
+                                handleAddressSelect(address);
                                 setAddressSuggestions([]);
                               }}
                             >
@@ -955,235 +937,463 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                         </div>
                       ) : null}
                     </div>
-                    
+
                     {addressError && (
                       <p className="text-red-500 text-sm">{addressError}</p>
                     )}
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
                       <input
                         type="text"
                         placeholder="Address will appear here after selection"
-                        value={editingCustomer.billingAddress}
-                        onChange={e => setEditingCustomer({ ...editingCustomer, billingAddress: e.target.value })}
+                        value={newCustomer.billingAddress}
+                        onChange={e => setNewCustomer({ ...newCustomer, billingAddress: e.target.value })}
                         className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
                       />
                     </div>
                   </div>
-                   {/* 2. First Name */}
-        <input
-          type="text"
-          placeholder="First Name"
-          value={editingCustomer.firstName || ''}
-          onChange={e => setEditingCustomer({ ...editingCustomer, firstName: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
 
-        {/* 3. Last Name */}
-        <input
-          type="text"
-          placeholder="Last Name"
-          value={editingCustomer.lastName || ''}
-          onChange={e => setEditingCustomer({ ...editingCustomer, lastName: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 2. First Name */}
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={newCustomer.firstName}
+                    onChange={e => setNewCustomer({ ...newCustomer, firstName: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 4. Company */}
-        <input
-          type="text"
-          placeholder="Company"
-          value={editingCustomer.company}
-          onChange={e => setEditingCustomer({ ...editingCustomer, company: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 3. Last Name */}
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={newCustomer.lastName || ''}
+                    onChange={e => setNewCustomer({ ...newCustomer, lastName: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 5. Duration */}
-        <input
-          type="text"
-          placeholder="Duration (e.g. 2 years)"
-          value={editingCustomer.duration}
-          onChange={e => setEditingCustomer({ ...editingCustomer, duration: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 4. Company */}
+                  <input
+                    type="text"
+                    placeholder="Company"
+                    value={newCustomer.company}
+                    onChange={e => setNewCustomer({ ...newCustomer, company: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 6. Email */}
-        <input
-          type="text"
-          placeholder="Email Address"
-          value={editingCustomer.email}
-          onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 5. Duration */}
+                  <input
+                    type="text"
+                    placeholder="Duration (e.g. 2 years)"
+                    value={newCustomer.duration}
+                    onChange={e => setNewCustomer({ ...newCustomer, duration: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 7. Phone */}
-        <input
-          type="text"
-          placeholder="Phone Number"
-          value={editingCustomer.phone}
-          onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 6. Email */}
+                  <input
+                    type="text"
+                    placeholder="Email Address"
+                    value={newCustomer.email}
+                    onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 8. Payment Info */}
-        <input
-          type="text"
-          placeholder="Payment Info"
-          value={editingCustomer.paymentInfo}
-          onChange={e => setEditingCustomer({ ...editingCustomer, paymentInfo: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 7. Phone */}
+                  <input
+                    type="text"
+                    placeholder="Phone Number"
+                    value={newCustomer.phone}
+                    onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 9. VAT Code */}
-        <input
-          type="text"
-          placeholder="Customer VAT Code"
-          value={editingCustomer.vatCode}
-          onChange={e => setEditingCustomer({ ...editingCustomer, vatCode: e.target.value })}
-          className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-        />
+                  {/* 8. Payment Info */}
+                  <input
+                    type="text"
+                    placeholder="Payment Info"
+                    value={newCustomer.paymentInfo}
+                    onChange={e => setNewCustomer({ ...newCustomer, paymentInfo: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
 
-        {/* 10. Services (Multi-select Dropdown) */}
-        <div className="md:col-span-2 relative">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
-          <div
-            className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
-            onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
-          >
-            {editingCustomer.services.current.length > 0
-              ? editingCustomer.services.current.join(', ')
-              : 'Select services'}
+                  {/* 9. VAT Code */}
+                  <input
+                    type="text"
+                    placeholder="Customer VAT Code"
+                    value={newCustomer.vatCode}
+                    onChange={e => setNewCustomer({ ...newCustomer, vatCode: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 10. Services (multi-select) */}
+                          <div className="md:col-span-2 relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+            <div
+              className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
+              onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
+            >
+              {newCustomer.services.current.length > 0
+                ? newCustomer.services.current.join(', ')
+                : 'Select services'}
+            </div>
+
+            {serviceDropdownOpen && (
+              <div
+                ref={dropdownRef}
+                className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
+              >
+                {[
+                  "Totally Tasty",
+                  "Cleaning and Janitorial Supplies",
+                  "Business Supplies",
+                  "Business Print",
+                  "Managed Print",
+                  "Mailroom Equipment",
+                  "Secure Shredding",
+                  "Workspace",
+                  "Office Plants & Plant Displays",
+                  "Workwear",
+                  "Defibrillators",
+                ].map((service) => (
+                  <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mr-2"
+                      checked={newCustomer.services.current.includes(service)}
+                      onChange={() => {
+                        const isChecked = newCustomer.services.current.includes(service);
+                        const updated = isChecked
+                          ? newCustomer.services.current.filter((s) => s !== service)
+                          : [...newCustomer.services.current, service];
+                        setNewCustomer({
+                          ...newCustomer,
+                          services: {
+                            ...newCustomer.services,
+                            current: updated,
+                          },
+                        });
+                      }}
+                    />
+                    {service}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
-          {serviceDropdownOpen && (
-            <div
-              ref={dropdownRef}
-              className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
-            >
-              {[
-                "Totally Tasty",
-                "Cleaning and Janitorial Supplies",
-                "Business Supplies",
-                "Business Print",
-                "Managed Print",
-                "Mailroom Equipment",
-                "Secure Shredding",
-                "Workspace",
-                "Office Plants & Plant Displays",
-                "Workwear",
-                "Defibrillators",
-              ].map((service) => (
-                <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mr-2"
-                    checked={editingCustomer.services.current.includes(service)}
-                    onChange={() => {
-                      const isChecked = editingCustomer.services.current.includes(service);
-                      const updated = isChecked
-                        ? editingCustomer.services.current.filter((s) => s !== service)
-                        : [...editingCustomer.services.current, service];
-                      setEditingCustomer({
-                        ...editingCustomer,
-                        services: {
-                          ...editingCustomer.services,
-                          current: updated,
-                        },
-                      });
-                    }}
-                  />
-                  {service}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-                  {/* {[
-                    ['Full Name', 'name'],
-                    ['Company', 'company'],
-                    ['Duration (e.g. 2 years)', 'duration'],
-                    ['Email Address', 'email'],
-                    ['Phone Number', 'phone'],
-                    ['Payment Info', 'paymentInfo'],
-                    ['Customer VAT Code', 'vatCode'],
-                  ].map(([placeholder, field]) => (
-                    <input
-                      key={field}
-                      type="text"
-                      placeholder={placeholder}
-                      value={editingCustomer[field as keyof Customer] as string}
-                      onChange={e => setEditingCustomer({ ...editingCustomer, [field]: e.target.value })}
-                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                    />
-                  ))} */}
-
-                  
+                  {/* 11. Past Services */}
                   <input
                     type="text"
                     placeholder="Past Services (comma separated)"
-                    value={editingCustomer.services.past.join(', ')}
                     onChange={e =>
-                      setEditingCustomer({
-                        ...editingCustomer,
+                      setNewCustomer({
+                        ...newCustomer,
                         services: {
-                          ...editingCustomer.services,
+                          ...newCustomer.services,
                           past: e.target.value.split(',').map(s => s.trim()),
                         },
                       })
                     }
-                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
                   />
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Document Upload</label>
-                    <input
-                      type="file"
-                      accept="application/pdf,image/*"
-                      onChange={e =>
-                        setEditingCustomer({
-                          ...editingCustomer,
-                          document: e.target.files ? e.target.files[0] : editingCustomer.document,
-                        })
-                      }
-                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded w-full"
-                    />
-                    {typeof editingCustomer.document === 'string' && (
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-600">Current document:</p>
-                        <a 
-                          href={`http://localhost:5000${editingCustomer.document}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          View Current Document
-                        </a>
-                      </div>
-                    )}
-                  </div>
+
+                  {/* 12. Document Upload */}
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={e =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        document: e.target.files ? e.target.files[0] : null,
+                      })
+                    }
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded md:col-span-2"
+                  />
                 </div>
+
+                {/* Action Buttons */}
                 <div className="flex justify-end gap-3">
                   <button
-                    onClick={() => {
-                      setShowEditForm(false);
-                      setEditingCustomer(null);
-                    }}
+                    onClick={() => setShowAddForm(false)}
                     className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleUpdateCustomer}
+                    onClick={handleAddCustomer}
                     className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
                   >
-                    Update Customer
+                    Add Customer
                   </button>
                 </div>
               </div>
             </div>
           )}
+                    {showEditForm && editingCustomer && (
+                      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
+                          <h2 className="text-xl font-semibold mb-4 text-blue-700">Edit Customer</h2>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {/* Postcode Lookup */}
+                            <div className="space-y-2">
+                              <div className="relative">
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Enter UK Postcode (e.g., M3 1SH)"
+                                    value={postcode}
+                                    onChange={e => setPostcode(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
+                                    className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handlePostcodeLookup}
+                                    disabled={isLoadingAddress}
+                                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                                  >
+                                    {isLoadingAddress ? 'Looking...' : 'Find'}
+                                  </button>
+                                </div>
+                                
+                                {/* Address Dropdown */}
+                                {isLoadingAddress ? (
+                                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
+                                    <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
+                                  </div>
+                                ) : addressSuggestions.length > 0 ? (
+                                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                    <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
+                                      Found {addressSuggestions.length} addresses:
+                                    </div>
+                                    {addressSuggestions.map((address, index) => (
+                                      <div
+                                        key={index}
+                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                        onClick={() => {
+                                          setEditingCustomer({...editingCustomer, billingAddress: address});
+                                          setAddressSuggestions([]);
+                                        }}
+                                      >
+                                        {address}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                              
+                              {addressError && (
+                                <p className="text-red-500 text-sm">{addressError}</p>
+                              )}
+                              
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+                                <input
+                                  type="text"
+                                  placeholder="Address will appear here after selection"
+                                  value={editingCustomer.billingAddress}
+                                  onChange={e => setEditingCustomer({ ...editingCustomer, billingAddress: e.target.value })}
+                                  className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                                />
+                              </div>
+                            </div>
+                             {/* 2. First Name */}
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={editingCustomer.firstName || ''}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, firstName: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 3. Last Name */}
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={editingCustomer.lastName || ''}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, lastName: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 4. Company */}
+                  <input
+                    type="text"
+                    placeholder="Company"
+                    value={editingCustomer.company}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, company: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 5. Duration */}
+                  <input
+                    type="text"
+                    placeholder="Duration (e.g. 2 years)"
+                    value={editingCustomer.duration}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, duration: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 6. Email */}
+                  <input
+                    type="text"
+                    placeholder="Email Address"
+                    value={editingCustomer.email}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 7. Phone */}
+                  <input
+                    type="text"
+                    placeholder="Phone Number"
+                    value={editingCustomer.phone}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 8. Payment Info */}
+                  <input
+                    type="text"
+                    placeholder="Payment Info"
+                    value={editingCustomer.paymentInfo}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, paymentInfo: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 9. VAT Code */}
+                  <input
+                    type="text"
+                    placeholder="Customer VAT Code"
+                    value={editingCustomer.vatCode}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, vatCode: e.target.value })}
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+
+                  {/* 10. Services (Multi-select Dropdown) */}
+                  <div className="md:col-span-2 relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+                    <div
+                      className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
+                      onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
+                    >
+                      {editingCustomer.services.current.length > 0
+                        ? editingCustomer.services.current.join(', ')
+                        : 'Select services'}
+                    </div>
+
+                    {serviceDropdownOpen && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
+                      >
+                        {[
+                          "Totally Tasty",
+                          "Cleaning and Janitorial Supplies",
+                          "Business Supplies",
+                          "Business Print",
+                          "Managed Print",
+                          "Mailroom Equipment",
+                          "Secure Shredding",
+                          "Workspace",
+                          "Office Plants & Plant Displays",
+                          "Workwear",
+                          "Defibrillators",
+                        ].map((service) => (
+                          <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="mr-2"
+                              checked={editingCustomer.services.current.includes(service)}
+                              onChange={() => {
+                                const isChecked = editingCustomer.services.current.includes(service);
+                                const updated = isChecked
+                                  ? editingCustomer.services.current.filter((s) => s !== service)
+                                  : [...editingCustomer.services.current, service];
+                                setEditingCustomer({
+                                  ...editingCustomer,
+                                  services: {
+                                    ...editingCustomer.services,
+                                    current: updated,
+                                  },
+                                });
+                              }}
+                            />
+                            {service}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                            
+                            <input
+                              type="text"
+                              placeholder="Past Services (comma separated)"
+                              value={editingCustomer.services.past.join(', ')}
+                              onChange={e =>
+                                setEditingCustomer({
+                                  ...editingCustomer,
+                                  services: {
+                                    ...editingCustomer.services,
+                                    past: e.target.value.split(',').map(s => s.trim()),
+                                  },
+                                })
+                              }
+                              className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                            />
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Document Upload</label>
+                              <input
+                                type="file"
+                                accept="application/pdf,image/*"
+                                onChange={e =>
+                                  setEditingCustomer({
+                                    ...editingCustomer,
+                                    document: e.target.files ? e.target.files[0] : editingCustomer.document,
+                                  })
+                                }
+                                className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded w-full"
+                              />
+                              {typeof editingCustomer.document === 'string' && (
+                                <div className="mt-2">
+                                  <p className="text-sm text-gray-600">Current document:</p>
+                                  <a 
+                                    href={`http://localhost:5000${editingCustomer.document}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-blue-600 hover:underline"
+                                  >
+                                    View Current Document
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => {
+                                setShowEditForm(false);
+                                setEditingCustomer(null);
+                              }}
+                              className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleUpdateCustomer}
+                              className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+                            >
+                              Update Customer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                     )}
 
         </div>
       </div>
+    </div>
   );
 };
 
