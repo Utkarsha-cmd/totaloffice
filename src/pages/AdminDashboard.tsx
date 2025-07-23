@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search} from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Order } from '../hooks/order';
-import { orderService } from '../hooks/orderservice';
+import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
 
 interface AdminDashboardProps {
@@ -17,7 +17,6 @@ interface UserWithFile extends Omit<User, 'document'> {
   document?: File | null;
   _id?: string;
 }
-
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onLogout }) => {
   const [customers, setCustomers] = useState<UserWithFile[]>([]);
@@ -44,6 +43,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [editingCustomer, setEditingCustomer] = useState<UserWithFile | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
   const [postcode, setPostcode] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
@@ -51,15 +51,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setServiceDropdownOpen(false);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setServiceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
     }
-  };
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
+  }, [activeTab]);
 
   const handlePostcodeLookup = async () => {
     if (!postcode.trim()) {
@@ -137,6 +143,28 @@ useEffect(() => {
     { name: 'Orders', tab: 'orders',  icon: Package, current: activeTab === 'orders' },
   ];
 
+  const fetchOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const orders = await orderService.getOrders();
+      setOrders(orders);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch orders');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (orderId: string, status: Order['status']) => {
+    try {
+      await orderService.updateOrderStatus(orderId, status);
+      // Refresh orders after status update
+      fetchOrders();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update order status');
+    }
+  };
+
   const handleDownloadCSV = async () => {
     try {
       await userService.exportUsersCSV();
@@ -198,145 +226,6 @@ useEffect(() => {
       setError(err.message || 'Failed to add user');
     }
   };
-  const mockOrders: Order[] = [
-  {
-    _id: 'order1',
-    orderNumber: 'ORD-1001',
-    customerId: '1',
-    customerName: 'John Smith',
-    customerEmail: 'john.smith@company.com',
-    items: [
-      {
-        id: 'item1',
-        name: 'Cleaning Supplies',
-        category: 'Janitorial',
-        quantity: 2,
-        price: 49.99,
-      },
-      {
-        id: 'item2',
-        name: 'Business Cards',
-        category: 'Print',
-        quantity: 1,
-        price: 19.99,
-      }
-    ],
-    subtotal: 119.97,
-    tax: 10.00,
-    shipping: 5.00,
-    total: 134.97,
-    status: 'pending',
-    shippingAddress: {
-      firstName: 'John',
-      lastName: 'Smith',
-      street: '123 Business Park Drive',
-      city: 'Manchester',
-      state: '',
-      postalCode: 'M3 1SH',
-      country: 'UK',
-      phone: '+44 161 123 4567'
-    },
-    billingAddress: {
-      firstName: 'John',
-      lastName: 'Smith',
-      street: '123 Business Park Drive',
-      city: 'Manchester',
-      state: '',
-      postalCode: 'M3 1SH',
-      country: 'UK',
-      phone: '+44 161 123 4567'
-    },
-    paymentMethod: 'Credit Card',
-    trackingNumber: 'TRK123456',
-    orderDate: '2025-07-17T10:30:00Z',
-    estimatedDelivery: '2025-07-22T00:00:00Z',
-    notes: 'Leave at reception.'
-  },
-  {
-    _id: 'order2',
-    orderNumber: 'ORD-1002',
-    customerId: '2',
-    customerName: 'Sarah Johnson',
-    customerEmail: 'sarah.johnson@innovate.co.uk',
-    items: [
-      {
-        id: 'item3',
-        name: 'Totally Tasty Snack Box',
-        category: 'Food',
-        quantity: 3,
-        price: 29.99,
-      }
-    ],
-    subtotal: 89.97,
-    tax: 7.50,
-    shipping: 4.00,
-    total: 101.47,
-    status: 'shipped',
-    shippingAddress: {
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      street: '456 Innovation Way',
-      city: 'Birmingham',
-      state: '',
-      postalCode: 'B1 2AA',
-      country: 'UK',
-      phone: '+44 121 456 7890'
-    },
-    billingAddress: {
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      street: '456 Innovation Way',
-      city: 'Birmingham',
-      state: '',
-      postalCode: 'B1 2AA',
-      country: 'UK',
-      phone: '+44 121 456 7890'
-    },
-    paymentMethod: 'Bank Transfer',
-    orderDate: '2025-07-15T15:00:00Z',
-    estimatedDelivery: '2025-07-20T00:00:00Z'
-  }
-];
-const fetchOrders = async () => {
-  setLoading(true);
-  try {
-    setOrders(mockOrders); 
-  } catch (err: any) {
-    setError(err.message || 'Failed to fetch orders');
-    setOrders([]);
-  } finally {
-    setLoading(false);
-  }
-};
- useEffect(() => {
-  if (activeTab === 'orders') {
-    fetchOrders();
-  }
-}, [activeTab]);
-
-    const handleStatusUpdate = async (orderId: string, status: Order['status']) => {
-    try {
-      await orderService.updateOrderStatus(orderId, status);
-      fetchOrders(); 
-    } catch (err: any) {
-      setError(err.message || 'Failed to update order status');
-    }
-  };
-  
-  // const fetchOrders = async () => {
-  //   try {
-  //     setLoading(true);
-  //     setError('');
-  //     const data = await orderService.getOrders(searchTerm);
-  //     setOrders(data);
-  //   } catch (err: any) {
-  //     console.error('Error fetching orders:', err);
-  //     setError(err.message || 'Failed to fetch orders');
-  //     setOrders([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const handleEditCustomer = (customer: UserWithFile) => {
     setEditingCustomer({
@@ -401,7 +290,6 @@ const fetchOrders = async () => {
     }
   };
 
-  // Fetch users from API
   const fetchCustomers = async () => {
     try {
       setLoading(true);
@@ -422,7 +310,6 @@ const fetchOrders = async () => {
     }
   };
 
-  // Delete user
   const handleDeleteCustomer = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -580,19 +467,37 @@ const fetchOrders = async () => {
             {/* Content based on active tab */}
             {activeTab === 'orders' ? (
               // Orders tab content
-              <div>
-                {loading ? (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800">Order Management</h2>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Search orders..."
+                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    <button 
+                      onClick={fetchOrders}
+                      className="p-1.5 text-gray-500 hover:text-gray-700"
+                      title="Refresh orders"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                
+                {ordersLoading ? (
                   <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-400"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
                   </div>
                 ) : orders.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-30 text-gray-400" />
-                    <p className="text-lg">No orders found</p>
-                    <p className="text-sm">Orders will appear here when customers make purchases.</p>
+                  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                    <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
+                    <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {orders.map((order) => (
                       <OrderCard 
                         key={order._id} 

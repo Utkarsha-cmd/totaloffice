@@ -37,5 +37,6 @@ export interface Order {
   trackingNumber?: string;
   orderDate: string;
   estimatedDelivery?: string;
+  expectedDelivery?: string;
   notes?: string;
 }

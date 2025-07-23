@@ -11,6 +11,7 @@ import { DeliveryCalendar, type Delivery } from "../components/DeliveryCalendar"
 import { OrdersTab } from "../components/OrderTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  
+// Mock data for deliveries
 const deliveriesMock: Delivery[] = [
   {
     id: 'DLV123456',
@@ -60,6 +61,7 @@ interface CustomerInfo {
   name: string;
   email: string;
   phone: string;
+  paymentMethod?: string;
   address: {
     street: string;
     city: string;
@@ -488,7 +490,7 @@ const recentDeliveries = filteredDeliveries.filter(
           <button
             onClick={() => setActiveTab('orders')}
             className={`text-left px-4 py-2 rounded-md font-medium text-sm ${
-              activeTab === 'deliveries'
+              activeTab === 'orders'
                 ? 'bg-green-100 text-green-800'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -510,7 +512,12 @@ const recentDeliveries = filteredDeliveries.filter(
 
       {/* Main Content */}
       <main className="space-y-6">
-        {activeTab === 'profile' && (
+        {activeTab === 'orders' ? (
+          <div className="space-y-6 max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
+            <OrdersTab customerInfo={customerInfo} />
+          </div>
+        ) : activeTab === 'profile' ? (
           <div className="space-y-6 max-w-4xl mx-auto">
             {/* Error message */}
             {error && (
@@ -786,17 +793,18 @@ const recentDeliveries = filteredDeliveries.filter(
               </CardContent>
             </Card>
           </div>
-        )}
-         {activeTab === 'deliveries' && (
+        ) : activeTab === 'deliveries' ? (
           <div className="mt-10 space-y-6">
-           {/* Header */}
+            {/* Header */}
             <h2 className="text-2xl font-semibold text-gray-700">Delivery Calendar</h2>
-              <DeliveryCalendar deliveries={deliveriesMock} />
+            <DeliveryCalendar deliveries={deliveriesMock} />
           </div>
-       )}
-        {activeTab === 'orders' && (
-          <OrdersTab />
-        )}
+        ) : activeTab === 'orders' ? (
+          <div className="space-y-6 max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
+            <OrdersTab customerInfo={customerInfo} />
+          </div>
+        ) : null}
       </main>
     </div>
   </div>

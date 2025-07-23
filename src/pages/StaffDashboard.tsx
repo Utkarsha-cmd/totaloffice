@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, userService } from '../services/userService';
-import { Order } from '../hooks/order';
-import { orderService } from '../hooks/orderservice';
+import { orderService, Order } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
 import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search} from 'lucide-react';
 
@@ -17,6 +16,8 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+  const [ordersError, setOrdersError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'customers' | 'orders'>('customers');;
 
   const navigation = [
@@ -41,134 +42,46 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
 
     fetchCustomers();
   }, []);
-  const mockOrders: Order[] = [
-    {
-      _id: 'order1',
-      orderNumber: 'ORD-1001',
-      customerId: '1',
-      customerName: 'John Smith',
-      customerEmail: 'john.smith@company.com',
-      items: [
-        {
-          id: 'item1',
-          name: 'Cleaning Supplies',
-          category: 'Janitorial',
-          quantity: 2,
-          price: 49.99,
-        },
-        {
-          id: 'item2',
-          name: 'Business Cards',
-          category: 'Print',
-          quantity: 1,
-          price: 19.99,
-        }
-      ],
-      subtotal: 119.97,
-      tax: 10.00,
-      shipping: 5.00,
-      total: 134.97,
-      status: 'pending',
-      shippingAddress: {
-        firstName: 'John',
-        lastName: 'Smith',
-        street: '123 Business Park Drive',
-        city: 'Manchester',
-        state: '',
-        postalCode: 'M3 1SH',
-        country: 'UK',
-        phone: '+44 161 123 4567'
-      },
-      billingAddress: {
-        firstName: 'John',
-        lastName: 'Smith',
-        street: '123 Business Park Drive',
-        city: 'Manchester',
-        state: '',
-        postalCode: 'M3 1SH',
-        country: 'UK',
-        phone: '+44 161 123 4567'
-      },
-      paymentMethod: 'Credit Card',
-      trackingNumber: 'TRK123456',
-      orderDate: '2025-07-17T10:30:00Z',
-      estimatedDelivery: '2025-07-22T00:00:00Z',
-      notes: 'Leave at reception.'
-    },
-    {
-      _id: 'order2',
-      orderNumber: 'ORD-1002',
-      customerId: '2',
-      customerName: 'Sarah Johnson',
-      customerEmail: 'sarah.johnson@innovate.co.uk',
-      items: [
-        {
-          id: 'item3',
-          name: 'Totally Tasty Snack Box',
-          category: 'Food',
-          quantity: 3,
-          price: 29.99,
-        }
-      ],
-      subtotal: 89.97,
-      tax: 7.50,
-      shipping: 4.00,
-      total: 101.47,
-      status: 'shipped',
-      shippingAddress: {
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        street: '456 Innovation Way',
-        city: 'Birmingham',
-        state: '',
-        postalCode: 'B1 2AA',
-        country: 'UK',
-        phone: '+44 121 456 7890'
-      },
-      billingAddress: {
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        street: '456 Innovation Way',
-        city: 'Birmingham',
-        state: '',
-        postalCode: 'B1 2AA',
-        country: 'UK',
-        phone: '+44 121 456 7890'
-      },
-      paymentMethod: 'Bank Transfer',
-      orderDate: '2025-07-15T15:00:00Z',
-      estimatedDelivery: '2025-07-20T00:00:00Z'
-    }
-  ];
- const fetchOrders = async () => {
-  setLoading(true);
-  try {
-    setOrders(mockOrders); 
-  } catch (err: any) {
-    setError(err.message || 'Failed to fetch orders');
-    setOrders([]);
-  } finally {
-    setLoading(false);
-  }
-};
   useEffect(() => {
     if (activeTab === 'orders') {
+      const fetchOrders = async () => {
+        try {
+          setOrdersLoading(true);
+          setOrdersError('');
+          const data = await orderService.getOrders();
+          setOrders(data);
+        } catch (err) {
+          console.error('Error fetching orders:', err);
+          setOrdersError('Failed to load orders. Please try again later.');
+        } finally {
+          setOrdersLoading(false);
+        }
+      };
+
       fetchOrders();
     }
   }, [activeTab]);
   
-      const handleStatusUpdate = async (orderId: string, status: Order['status']) => {
-      try {
-        await orderService.updateOrderStatus(orderId, status);
-        fetchOrders(); 
-      } catch (err: any) {
-        setError(err.message || 'Failed to update order status');
-      }
-    };
+  const handleStatusUpdate = async (orderId: string, status: Order['status']) => {
+    try {
+      const updatedOrder = await orderService.updateOrderStatus(orderId, status);
+      setOrders(orders.map(order => 
+        order._id === updatedOrder._id ? updatedOrder : order
+      ));
+    } catch (err) {
+      console.error('Error updating order status:', err);
+    }
+  };
+
   const filteredCustomers = customers.filter(customer => 
     `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (customer.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredOrders = orders.filter(order => 
+    order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customerName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {

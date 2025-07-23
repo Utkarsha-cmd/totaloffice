@@ -1,9 +1,42 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format } from 'date-fns';
+import OrderCard from './OrderCard';
+import axios from 'axios';
+
+type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  description: string;
+}
+
+export interface Order {
+  _id: string;
+  orderNumber: string;
+  customerName: string;
+  items: OrderItem[];
+  totalAmount: number;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  status: OrderStatus;
+  paymentStatus: string;
+  expectedDeliveryDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 import {
   ShoppingCart,
   Plus,
@@ -29,6 +62,19 @@ interface Product {
 
 interface CartItem extends Product {
   quantity: number;
+}
+
+interface OrderTabProps {
+  customerInfo?: {
+    name?: string;
+    paymentMethod?: string;
+    address?: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+    };
+  };
 }
 
 const services = [
@@ -169,8 +215,58 @@ const productsByService: Record<string, Product[]> = {
   ]
 };
 
-export const OrdersTab: React.FC = () => {
+export const OrdersTab: React.FC<OrderTabProps> = (props) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get('/api/orders');
+      setOrders(data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch orders',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (orderId: string, status: OrderStatus) => {
+    try {
+      await axios.put(`/api/orders/${orderId}/status`, { status });
+      await fetchOrders();
+      toast({
+        title: 'Success',
+        description: 'Order status updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const filteredOrders = selectedStatus === 'all' 
+    ? orders 
+    : orders.filter(order => order.status === selectedStatus);
+
+  const getStatusCount = (status: OrderStatus) => {
+    return orders.filter(order => order.status === status).length;
+  };
   const [selectedService, setSelectedService] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -229,7 +325,7 @@ export const OrdersTab: React.FC = () => {
   const getCartTotal = () =>
     cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cart.length === 0) {
       toast({
         title: 'Empty Cart',
@@ -239,13 +335,147 @@ export const OrdersTab: React.FC = () => {
       return;
     }
 
-    toast({
-      title: 'Order Placed Successfully!',
-      description: `Your order total is $${getCartTotal().toFixed(2)}.`,
-      className: 'bg-white text-black border border-gray-200',
-    });
+    try {
+      // Get user data from localStorage
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const token = userData.token;
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
 
-    setCart([]);
+          // Get customer data from props or localStorage
+      const getCustomerData = () => {
+        try {
+          console.log('Customer Info from props:', props); // Debug log
+          
+          // Initialize default values
+          let address = 'Address not specified';
+          let name = 'Customer';
+          let paymentMethod = 'credit_card';
+          
+          // Get data from props if available
+          if (props?.customerInfo) {
+            // Get address from props
+            if (props.customerInfo.address) {
+              const { street, city, state, zipCode } = props.customerInfo.address;
+              address = [street, city, state, zipCode].filter(Boolean).join(', ');
+              console.log('Using address from props:', address);
+            }
+            
+            // Get name from props
+            if (props.customerInfo.name) {
+              name = props.customerInfo.name;
+              console.log('Using name from props:', name);
+            }
+            
+            // Get payment method from props
+            if (props.customerInfo.paymentMethod) {
+              paymentMethod = props.customerInfo.paymentMethod;
+              console.log('Using payment method from props:', paymentMethod);
+            }
+            
+            return { address, name, paymentMethod };
+          }
+          
+          // Fallback to localStorage if no props
+          const storedProfile = localStorage.getItem('customerInfo');
+          if (storedProfile) {
+            const profile = JSON.parse(storedProfile);
+            
+            // Get address from localStorage
+            if (profile?.address) {
+              const { street, city, state, zipCode } = profile.address;
+              address = [street, city, state, zipCode].filter(Boolean).join(', ');
+              console.log('Using address from localStorage:', address);
+            }
+            
+            // Get name from localStorage
+            if (profile?.name) {
+              name = profile.name;
+              console.log('Using name from localStorage:', name);
+            }
+            
+            // Get payment method from localStorage
+            if (profile?.paymentMethod) {
+              paymentMethod = profile.paymentMethod;
+              console.log('Using payment method from localStorage:', paymentMethod);
+            }
+          }
+          
+          console.log('Final customer data:', { address, name, paymentMethod });
+          return { address, name, paymentMethod };
+          
+        } catch (error) {
+          console.error('Error getting customer data:', error);
+          return {
+            address: 'Address not specified',
+            name: 'Customer',
+            paymentMethod: 'credit_card'
+          };
+        }
+      };
+      
+      // Get all customer data at once
+      const { address: shippingAddress, name: customerName, paymentMethod } = getCustomerData();
+      console.log('Final shipping address:', shippingAddress); // Debug log
+
+      const orderData = {
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          description: item.description
+        })),
+        customerName: customerName,
+        shippingAddress: shippingAddress,
+        paymentMethod: paymentMethod
+      };
+
+      // Use the full URL with the correct backend port
+      const apiUrl = 'http://localhost:5000/api/orders';
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include', // Important for sending cookies if using them
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to place order';
+        try {
+          // Try to parse the error response as JSON
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const order = await response.json();
+      
+      toast({
+        title: 'Order Placed Successfully!',
+        description: `Your order #${order._id} has been received. Total: $${getCartTotal().toFixed(2)}`,
+        className: 'bg-white text-black border border-gray-200',
+      });
+
+      setCart([]);
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast({
+        title: 'Order Failed',
+        description: error.message || 'There was an error placing your order. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const selectedProducts = selectedService

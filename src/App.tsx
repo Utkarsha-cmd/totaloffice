@@ -109,7 +109,6 @@ const App = () => {
             username={username}
             userType="staff"
             onLogout={handleLogout}
-            customers={dummyCustomers}
           />
         );
       case "customer":
@@ -171,7 +170,6 @@ const App = () => {
                     username={username}
                     userType="staff"
                     onLogout={handleLogout}
-                    customers={dummyCustomers}
                   />
                 ) : (
                   <Navigate to="/login" replace />
