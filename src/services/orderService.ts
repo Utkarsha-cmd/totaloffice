@@ -127,18 +127,56 @@ const mapBackendOrderToFrontend = (backendOrder: any): Order => {
 };
 
 export const orderService = {
+  // Get all orders (for admin/staff)
   async getOrders(): Promise<Order[]> {
     try {
-      const response = await api.get('/orders');
-      return response.data.map(mapBackendOrderToFrontend);
+      const response = await api.get('/admin/orders');
+      return Array.isArray(response.data) 
+        ? response.data.map(mapBackendOrderToFrontend)
+        : [];
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      if (error.response?.status === 401) {
-        // Handle unauthorized error (e.g., redirect to login)
+      console.error('Error fetching admin orders:', error);
+      this.handleAuthError(error);
+      throw error;
+    }
+  },
+
+  // Get orders for the current customer
+  async getCustomerOrders(): Promise<Order[]> {
+    try {
+      const response = await api.get('/orders');
+      return Array.isArray(response.data) 
+        ? response.data.map(mapBackendOrderToFrontend)
+        : [];
+    } catch (error) {
+      console.error('Error fetching customer orders:', error);
+      this.handleAuthError(error);
+      throw error;
+    }
+  },
+
+  // Get a single order by ID
+  async getOrderById(orderId: string): Promise<Order | null> {
+    try {
+      const response = await api.get(`/orders/${orderId}`);
+      return response.data ? mapBackendOrderToFrontend(response.data) : null;
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      this.handleAuthError(error);
+      throw error;
+    }
+  },
+
+  // Handle authentication errors
+  private handleAuthError(error: any): void {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Handle unauthorized/forbidden errors
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user?.token) {
+        // If we have a token but still get auth error, it might be expired
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
-      throw error;
     }
   },
 
