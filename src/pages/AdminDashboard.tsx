@@ -56,38 +56,109 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [dashboardStats, setDashboardStats] = useState({
     totalOrders: 0,
     totalCustomers: 0,
-    totalServices: 11,
+    totalServices: 0,
     ordersReceived: 0,
     ordersDelivered: 0
   });
 
-  // Mock chart data - replace with real data from your API
-  const weeklyData = [
-    { name: 'Mon', orders: 12, delivered: 8 },
-    { name: 'Tue', orders: 19, delivered: 15 },
-    { name: 'Wed', orders: 8, delivered: 6 },
-    { name: 'Thu', orders: 25, delivered: 20 },
-    { name: 'Fri', orders: 18, delivered: 14 },
-    { name: 'Sat', orders: 14, delivered: 12 },
-    { name: 'Sun', orders: 9, delivered: 7 }
-  ];
+  // State for chart data
+  const [weeklyData, setWeeklyData] = useState<Array<{name: string, orders: number, delivered: number}>>([]);
+  const [monthlyData, setMonthlyData] = useState<Array<{name: string, orders: number, delivered: number}>>([]);
+  const [serviceDistribution, setServiceDistribution] = useState<Array<{name: string, value: number, color: string}>>([]);
 
-  const monthlyData = [
-    { name: 'Jan', orders: 145, delivered: 120 },
-    { name: 'Feb', orders: 165, delivered: 140 },
-    { name: 'Mar', orders: 132, delivered: 115 },
-    { name: 'Apr', orders: 178, delivered: 155 },
-    { name: 'May', orders: 195, delivered: 170 },
-    { name: 'Jun', orders: 210, delivered: 185 }
-  ];
+  // Process orders data for charts
+  const processOrdersData = (orders: Order[]) => {
+    // Process weekly data (last 7 days)
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    });
 
-  const serviceDistribution = [
-    { name: 'Totally Tasty', value: 35, color: '#10b981' },
-    { name: 'Cleaning Supplies', value: 25, color: '#34d399' },
-    { name: 'Business Supplies', value: 20, color: '#6ee7b7' },
-    { name: 'Print Services', value: 12, color: '#a7f3d0' },
-    { name: 'Others', value: 8, color: '#d1fae5' }
-  ];
+    const weeklyOrders = last7Days.map(day => {
+      const dayOrders = orders.filter(order => {
+        const orderDate = new Date(order.orderDate);
+        return orderDate.toLocaleDateString('en-US', { weekday: 'short' }) === day;
+      });
+      
+      return {
+        name: day,
+        orders: dayOrders.length,
+        delivered: dayOrders.filter(order => order.status === 'delivered').length
+      };
+    });
+
+    // Process monthly data (last 6 months)
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - (5 - i));
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    });
+
+    const monthlyOrders = last6Months.map(month => {
+      const monthOrders = orders.filter(order => {
+        const orderDate = new Date(order.orderDate);
+        return orderDate.toLocaleDateString('en-US', { month: 'short' }) === month;
+      });
+      
+      return {
+        name: month,
+        orders: monthOrders.length,
+        delivered: monthOrders.filter(order => order.status === 'delivered').length
+      };
+    });
+
+    // Process service distribution - Always show exactly 11 services
+    const allServices = [
+      'Totally Tasty', 
+      'Cleaning Supplies', 
+      'Business Supplies', 
+      'Print Services',
+      'Office Furniture',
+      'IT Equipment',
+      'Stationery',
+      'Kitchen Supplies',
+      'Safety Equipment',
+      'Packaging Materials',
+      'Miscellaneous'
+    ];
+
+    const serviceMap = new Map<string, number>();
+    
+    // Initialize all services with 0 count
+    allServices.forEach(service => {
+      serviceMap.set(service, 0);
+    });
+    
+    // Update counts from orders
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const category = item.category || 'Miscellaneous';
+        if (allServices.includes(category)) {
+          serviceMap.set(category, (serviceMap.get(category) || 0) + item.quantity);
+        } else {
+          // Add to Miscellaneous if category not in predefined list
+          serviceMap.set('Miscellaneous', (serviceMap.get('Miscellaneous') || 0) + item.quantity);
+        }
+      });
+    });
+
+    const colors = [
+      '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
+      '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534'
+    ];
+    
+    const distribution = Array.from(serviceMap.entries())
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: colors[index % colors.length] || '#10b981'
+      }));
+
+    setWeeklyData(weeklyOrders);
+    setMonthlyData(monthlyOrders);
+    setServiceDistribution(distribution);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -100,14 +171,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   }, []);
 
   useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+        const [ordersData, customersData] = await Promise.all([
+          orderService.getOrders(),
+          userService.getUsers('')
+        ]);
+        
+        setOrders(ordersData);
+        setCustomers(customersData);
+        processOrdersData(ordersData);
+        
+        setDashboardStats({
+          totalOrders: ordersData.length,
+          totalCustomers: customersData.length,
+          totalServices: 11, // Always show 11 services
+          ordersReceived: ordersData.filter(order => 
+            ['pending', 'processing', 'shipped', 'delivered'].includes(order.status)
+          ).length,
+          ordersDelivered: ordersData.filter(order => 
+            order.status === 'delivered'
+          ).length
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'orders') {
       fetchOrders();
     }
   }, [activeTab]);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   const fetchDashboardData = async () => {
     try {

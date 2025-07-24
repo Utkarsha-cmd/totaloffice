@@ -64,16 +64,20 @@ interface CartItem extends Product {
   quantity: number;
 }
 
+interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  [key: string]: any; // Allow additional properties
+}
+
 interface OrderTabProps {
   customerInfo?: {
     name?: string;
+    email?: string;
     paymentMethod?: string;
-    address?: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-    };
+    address?: Address;
   };
 }
 
@@ -352,6 +356,7 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
           // Initialize default values
           let address = 'Address not specified';
           let name = 'Customer';
+          let email = ''; // Initialize email
           let paymentMethod = 'credit_card';
           
           // Get data from props if available
@@ -369,13 +374,19 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
               console.log('Using name from props:', name);
             }
             
+            // Get email from props
+            if (props.customerInfo.email) {
+              email = props.customerInfo.email;
+              console.log('Using email from props:', email);
+            }
+            
             // Get payment method from props
             if (props.customerInfo.paymentMethod) {
               paymentMethod = props.customerInfo.paymentMethod;
               console.log('Using payment method from props:', paymentMethod);
             }
             
-            return { address, name, paymentMethod };
+            return { address, name, email, paymentMethod };
           }
           
           // Fallback to localStorage if no props
@@ -396,6 +407,12 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
               console.log('Using name from localStorage:', name);
             }
             
+            // Get email from localStorage
+            if (profile?.email) {
+              email = profile.email;
+              console.log('Using email from localStorage:', email);
+            }
+            
             // Get payment method from localStorage
             if (profile?.paymentMethod) {
               paymentMethod = profile.paymentMethod;
@@ -403,8 +420,8 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
             }
           }
           
-          console.log('Final customer data:', { address, name, paymentMethod });
-          return { address, name, paymentMethod };
+          console.log('Final customer data:', { address, name, email, paymentMethod });
+          return { address, name, email, paymentMethod };
           
         } catch (error) {
           console.error('Error getting customer data:', error);
@@ -417,8 +434,37 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
       };
       
       // Get all customer data at once
-      const { address: shippingAddress, name: customerName, paymentMethod } = getCustomerData();
+      const { 
+        address: shippingAddress, 
+        name: customerName, 
+        paymentMethod, 
+        email: customerEmail 
+      } = getCustomerData();
+      
       console.log('Final shipping address:', shippingAddress); // Debug log
+
+      // Format the shipping address as a single string
+      let formattedAddress: string;
+      
+      if (typeof shippingAddress === 'string') {
+        // If it's already a string, use it as is
+        formattedAddress = shippingAddress;
+      } else if (shippingAddress && typeof shippingAddress === 'object' && !Array.isArray(shippingAddress)) {
+        // If it's an address object, format it
+        const address = shippingAddress as Address;
+        formattedAddress = [
+          address.street,
+          address.city,
+          address.state,
+          address.zipCode
+        ].filter(Boolean).join(', ');
+      } else if (Array.isArray(shippingAddress)) {
+        // If it's an array, join it
+        formattedAddress = shippingAddress.filter(Boolean).join(', ');
+      } else {
+        // Fallback to empty string
+        formattedAddress = '';
+      }
 
       const orderData = {
         items: cart.map(item => ({
@@ -429,7 +475,8 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
           description: item.description
         })),
         customerName: customerName,
-        shippingAddress: shippingAddress,
+        customerEmail: customerEmail,
+        shippingAddress: formattedAddress, // Send as a single string
         paymentMethod: paymentMethod
       };
 

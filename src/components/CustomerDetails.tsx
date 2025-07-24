@@ -179,9 +179,7 @@ const recentDeliveries = filteredDeliveries.filter(
             setUserProfile(userData);
            
             // Combine firstName and lastName for display
-            const fullName = userData.firstName && userData.lastName 
-              ? `${userData.firstName} ${userData.lastName}`.trim()
-              : userData.name || prev.name || '';
+            const fullName = (userData.firstName || '') + (userData.lastName ? ` ${userData.lastName}` : '');
               
             // Get the correct email (prioritize email over contact)
             const userEmail = userData.email || userData.contact || prev.email || '';
@@ -275,11 +273,17 @@ const recentDeliveries = filteredDeliveries.filter(
       });
       return;
     }
+    
+    // Split name into first and last name
+    const nameParts = editedInfo.name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
    
     try {
       // Prepare the updated user data
       const formData = new FormData();
-      formData.append('name', editedInfo.name);
+      formData.append('firstName', firstName);
+      formData.append('lastName', lastName);
       formData.append('company', editedInfo.phone); // Using phone for company field
       formData.append('duration', userProfile?.duration);
      

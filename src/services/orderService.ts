@@ -130,7 +130,7 @@ export const orderService = {
   // Get all orders (for admin/staff)
   async getOrders(): Promise<Order[]> {
     try {
-      const response = await api.get('/admin/orders');
+      const response = await api.get('/orders/admin/orders');
       return Array.isArray(response.data) 
         ? response.data.map(mapBackendOrderToFrontend)
         : [];
