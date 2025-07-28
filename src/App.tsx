@@ -11,6 +11,8 @@ import RegisterPage from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import CustomerDetails from "./components/CustomerDetails";
+import WarehouseDashboard from "./components/warehouse";  
+
 
 const queryClient = new QueryClient();
 
@@ -44,17 +46,17 @@ const dummyCustomers = [
 
 const App = () => {
   // Initialize state from localStorage if available
-  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | null>(
+  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse' | null>(
     () => {
       const savedRole = localStorage.getItem('userRole');
-      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | null;
+      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse' | null;
     }
   );
   const [username, setUsername] = useState<string>(
     () => localStorage.getItem('username') || ''
   );
 
-  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician', username: string) => {
+  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician'| 'warehouse', username: string) => {
     console.log("User logged in:", role, username);
     // Save to state and localStorage
     setUserRole(role);
@@ -147,9 +149,12 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={
+            {/* <Route path="/login" element={
               userRole ? <Navigate to="/admin" replace /> : <LoginPage onLogin={handleLogin} />
-            } />
+            } /> */}
+            <Route path="/login" element={
+  userRole ? <Navigate to={`/${userRole}`} replace /> : <LoginPage onLogin={handleLogin} />
+} />
             <Route path="/register" element={<RegisterPage />} />
             
             {/* Protected routes */}
@@ -186,6 +191,19 @@ const App = () => {
                 )}
               </ProtectedRoute>
             } />
+            <Route path="/warehouse" element={
+  <ProtectedRoute>
+    {userRole === 'warehouse' ? (
+      <WarehouseDashboard
+        username={username}
+        userType={userRole}
+        onLogout={handleLogout}
+      />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </ProtectedRoute>
+} />
             
             <Route path="/" element={
               isLoading ? (
@@ -196,6 +214,7 @@ const App = () => {
                 <Navigate to="/login" replace />
               )
             } />
+            
             
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck} from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Order } from '../hooks/order';
@@ -25,8 +25,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'history' | 'orders'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details'  | 'orders'>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showHistory, setShowHistory] = useState<{[key: string]: boolean}>({});
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
     firstName: '',
     lastName: '',
@@ -158,6 +159,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
     setWeeklyData(weeklyOrders);
     setMonthlyData(monthlyOrders);
     setServiceDistribution(distribution);
+  };
+
+  const toggleHistory = (customerId: string) => {
+    setShowHistory(prev => ({
+      ...prev,
+      [customerId]: !prev[customerId]
+    }));
   };
 
   useEffect(() => {
@@ -301,7 +309,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, tab: 'dashboard', current: activeTab === 'dashboard' },
     { name: 'User Details', icon: Users, tab: 'details', current: activeTab === 'details' },
-    { name: 'User History', icon: Clock, tab: 'history', current: activeTab === 'history' },
     { name: 'Orders', tab: 'orders',  icon: Package, current: activeTab === 'orders' },
   ];
 
@@ -587,7 +594,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             {navigation.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'history' | 'orders')}
+                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details'  | 'orders')}
                 className={cn(
                   item.current
                     ? 'bg-green-50 text-green-700 border-r-4 border-green-600'
@@ -637,7 +644,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'history' ? 'Customer History': 'Orders'}
+                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : 'Orders'}
               </h1>
             </div>
 
@@ -878,7 +885,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                                   <div>
                                     <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
                                     <ul className="list-disc list-inside">
-                                      {customer.services && customer.services.current && customer.services.current.length > 0 ? (
+                                      {customer.services ?.current?.length > 0 ? (
                                         customer.services.current.map((service, i) => (
                                           <li key={i} className="text-sm text-gray-700">{service}</li>
                                         ))
@@ -887,20 +894,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                                       )}
                                     </ul>
                                   </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700  mb-1">Past Services</p>
-                                    <ul className="list-disc list-inside">
-                                      {customer.services && customer.services.past && customer.services.past.length > 0 ? (
-                                        customer.services.past.map((service, i) => (
-                                          <li key={i} className="text-sm text-gray-500">{service}</li>
-                                        ))
-                                      ) : (
-                                        <li className="text-sm text-gray-400">No past services</li>
-                                      )}
-                                    </ul>
+                                  {/* <div className="flex items-center justify-between mb-1">
+                                      <p className="text-sm font-medium text-gray-700">Service History</p>
+                                      <ul className='list-disc list-inside'>
+                                         {customer.services?.past?.length > 0 ? (
+                                           customer.services.past.map((service, i) => (
+                                             <li key={i} className="text-sm text-gray-500">{service}</li>
+                                            ))
+                                          ) : (
+                                            <li className="text-sm text-gray-400">No current services</li>
+                                          )}
+                                      </ul>    
+                                    </div> */}
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700 mb-1">Service History</p>
+                                        <ul className="list-disc list-inside">
+                                          {customer.services?.past ?.length > 0 ? (
+                                            customer.services.past.map((service, i) => (
+                                              <li key={i} className="text-sm text-gray-500">{service}</li>
+                                            ))
+                                          ) : (
+                                            <li className="text-sm text-gray-400">No past services</li>
+                                          )}
+                                        </ul>
+                                        <div className="mt-2">
+                                        <a
+                                          href={`/customer-history/${customer._id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm text-blue-600 hover:underline"
+                                          >
+                                            View Full History
+                                          </a>  
+                                        </div>
+                                      </div>
                                   </div>
                                 </div>
-                              </div>
                               {customer.document && (
                         <div className="mt-4">
                           <p className="text-sm font-medium text-gray-700">Document</p>
@@ -973,9 +1002,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                                         <li className="text-sm text-gray-400">No past services</li>
                                       )}
                                     </ul>
+                                    <div className="mt-2">
+                                      <a
+                                        href={`/customer-history/${customer._id}`}
+                                        className="text-sm text-blue-600 hover:underline"
+                                      >
+                                        View Full History
+                                      </a>  
                                   </div>
                                 </div>
                               </div>
+                            </div>  
                             </>
                           )}
                         </div>

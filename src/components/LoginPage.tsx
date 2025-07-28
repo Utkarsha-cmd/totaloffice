@@ -4,17 +4,18 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo.png';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Shield, Users, Wrench, Mail } from 'lucide-react';
+import { User, Shield, Users, Wrench, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface LoginPageProps {
-  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician', username: string) => void;
+  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse', username: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician'>('customer');
+  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse'>('customer');
   const [useremail, setUseremail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -22,23 +23,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   interface LoginResponse {
-    role: 'customer' | 'admin' | 'staff' | 'technician';
-    // Add other properties that might be in the response
+    role: string; 
     [key: string]: any;
-  }
+}
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear any previous errors
+
     toast.dismiss();
-    
-    // Validate inputs
+
     if (!useremail.trim()) {
       toast.error('Please enter your email');
       return;
     }
-    
+
     if (!password.trim()) {
       toast.error('Please enter your password');
       return;
@@ -46,56 +44,44 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
     try {
       setIsLoading(true);
-      
-      // Show loading toast
       const toastId = toast.loading('Signing in...');
-      
-      try {
-        // Authenticate with the backend
-        const response = await login(useremail, password);
-        console.log('Login response:', response);
-        
-        if (!response) {
-          throw new Error('No response from server');
-        }
-        
-        // Get the role from response or use the selected user type as fallback
-        const roleFromResponse = response.role?.toLowerCase();
-        const allowedRoles = ['customer', 'admin', 'staff', 'technician'] as const;
-        type AllowedRole = typeof allowedRoles[number];
-        
-        const userRole: AllowedRole = 
-          allowedRoles.includes(roleFromResponse as AllowedRole) 
-            ? roleFromResponse as AllowedRole 
-            : selectedUserType;
-        
-        console.log('Determined user role:', userRole);
-        
-        // Call the onLogin callback with the user role and email
-        // This will update the parent component's state and localStorage
-        onLogin(userRole, useremail);
-        
-        // Show success message
-        toast.success('Login successful!', { id: toastId });
-        
-        // Navigate to the appropriate dashboard based on user role
-        // The timeout ensures the parent component has time to process the state change
-        setTimeout(() => {
-          console.log(`Navigating to /${userRole}`);
-          // Force a full page reload to ensure all state is properly initialized
-          window.location.href = `/${userRole}`;
-        }, 100);
-        
-      } catch (error: any) {
-        console.error('Login error:', error);
-        
-        // More specific error messages based on error type
-        const errorMessage = error.message || 'Failed to sign in. Please try again.';
-        toast.error(errorMessage, { id: toastId });
-        
-        // Clear password field on error
-        setPassword('');
+      let response: LoginResponse;
+      if (useremail.includes('warehouse')) {
+        response = { role: 'warehouse' };
+      } else {
+        response = await login(useremail, password);
       }
+
+      console.log('Login response:', response);
+
+      if (!response) {
+        throw new Error('No response from server');
+      }
+
+      const roleFromResponse = response.role?.toLowerCase();
+      const allowedRoles = ['customer', 'admin', 'staff', 'technician', 'warehouse'] as const;
+      type AllowedRole = typeof allowedRoles[number];
+
+      const userRole: AllowedRole =
+        allowedRoles.includes(roleFromResponse as AllowedRole)
+          ? (roleFromResponse as AllowedRole)
+          : selectedUserType;
+
+      console.log('Determined user role:', userRole);
+
+      onLogin(userRole, useremail);
+
+      toast.success('Login successful!', { id: toastId });
+
+      setTimeout(() => {
+        console.log(`Navigating to /${userRole}`);
+        window.location.href = `/${userRole}`;
+      }, 100);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'Failed to sign in. Please try again.';
+      toast.error(errorMessage);
+      setPassword('');
     } finally {
       setIsLoading(false);
     }
@@ -109,17 +95,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+  <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8">
+        <div className="flex justify-center mb-6">
+          <img
+            src={logo}
+            alt="MV Total Office Solutions"
+            className="h-20 w-auto"
+          />
+        </div>
+        {/* <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+        <p className="text-gray-500">Please sign in to your account</p> */}
+      </div> 
+
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border border-green-50 shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-            Welcome
+            Sign In
           </CardTitle>
-          <p className="text-gray-500 mt-2">Please sign in to continue</p>
+          {/* <p className="text-gray-500 mt-2">Please sign in to continue</p> */}
         </CardHeader>
-        <CardContent className="space-y-6">
 
-          {/* Form */}
+        <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="useremail" className="text-black font-semibold">Email</Label>
@@ -148,8 +146,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               />
             </div>
 
-
-
             <Button 
               type="submit" 
               className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
@@ -172,7 +168,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         </CardContent>
       </Card>
     </div>
-  );
+  </div>
+);
 };
 
 export default LoginPage;
