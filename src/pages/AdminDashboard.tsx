@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Order } from '../hooks/order';
 import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
+import ServicesAndStocks from '@/components/ServiceandStock';
 
 interface AdminDashboardProps {
   username: string;
@@ -25,7 +26,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'details'  | 'orders'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details'| 'orders'| "services">("details");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showHistory, setShowHistory] = useState<{[key: string]: boolean}>({});
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
@@ -686,21 +687,23 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
               </h1>
             </div>
 
-            {activeTab !== 'dashboard' && (
+            {activeTab == 'details' && (
               <div className="flex items-center space-x-3">
+                <input
+      type="text"
+      placeholder="Search"
+      value={searchTerm}
+      onChange={e => setSearchTerm(e.target.value)}
+      className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-800 placeholder-gray-400"
+    />
                 <button
                   onClick={() => setShowAddForm(true)}
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
                   Add Customer
                 </button>
-                <button
-                  onClick={handleDownloadCSV}
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Export CSV
-                </button>
               </div>
+              
             )}
           </div>
         </div>
@@ -824,209 +827,15 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
                 </div>
               </div> */}
             </div>
-          )  : activeTab === 'services' ? (
-  <div className="space-y-6">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-xl font-semibold text-gray-800">Services and Stocks</h2>
-      <button
-        className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
-        onClick={() => setShowAddModal(true)}
-      >
-        + Add Service / Product
-      </button>
-    </div>
-
-    {/* Display services */}
-    {servicesAndProducts.length === 0 ? (
-      <div className="text-center text-gray-500 py-10">
-        No services yet. Click “Add Service / Product” to create one.
-      </div>
-    ) : (
-      servicesAndProducts.map((service) => (
-        <div key={service.serviceName} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <h3 className="text-lg font-semibold text-green-700 mb-3">{service.serviceName}</h3>
-          <div className="space-y-4">
-            {service.products.map((product) =>
-              editingProductId === product.id ? (
-                <div key={product.id} className="w-full border-b pb-3">
-                  <p className="text-sm font-semibold text-gray-800">{product.name}</p>
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:items-center">
-                    <div>
-                      <label className="text-xs text-gray-600 block">Stock</label>
-                      <input
-                        type="number"
-                        value={editedProduct.stock}
-                        onChange={(e) =>
-                          setEditedProduct({ ...editedProduct, stock: parseInt(e.target.value) })
-                        }
-                        className="border px-2 py-1 rounded text-sm w-full sm:w-24 text-gray-900 font-medium"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-600 block">Price (£)</label>
-                      <input
-                        type="number"
-                        value={editedProduct.price}
-                        onChange={(e) =>
-                          setEditedProduct({ ...editedProduct, price: parseFloat(e.target.value) })
-                        }
-                        className="border px-2 py-1 rounded text-sm w-full sm:w-24 text-gray-900 font-medium"
-                      />
-                    </div>
-                    <div className="flex gap-2 mt-2 sm:mt-6">
-                      <button
-                        onClick={() => handleSaveEdit(product.id, service.serviceName)}
-                        className="text-sm text-white bg-green-600 px-3 py-1 rounded hover:bg-green-700"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingProductId(null)}
-                        className="text-sm text-gray-600 border px-3 py-1 rounded hover:bg-gray-100"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div key={product.id} className="flex justify-between items-center border-b pb-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">
-                      Stock: {product.stock}, Price: £{product.price.toFixed(2)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingProductId(product.id);
-                      setEditedProduct(product);
-                    }}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Edit
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      ))
-    )}
-
-    {/* Add Service/Product Modal */}
-    {showAddModal && (
-      <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-          <h2 className="text-xl font-semibold mb-4 text-green-700">Add Service & Product</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Service Name</label>
-              <input
-                type="text"
-                value={newServiceData.serviceName}
-                onChange={(e) =>
-                  setNewServiceData({ ...newServiceData, serviceName: e.target.value })
-                }
-                className="w-full p-2 border border-gray-300 rounded text-gray-900 font-medium"
-                placeholder="e.g. My Printers"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Product Name</label>
-              <input
-                type="text"
-                value={newServiceData.productName}
-                onChange={(e) =>
-                  setNewServiceData({ ...newServiceData, productName: e.target.value })
-                }
-                className="w-full p-2 border border-gray-300 rounded text-gray-900 font-medium"
-                placeholder="e.g. HP Toner Cartridge"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Stock</label>
-                <input
-                  type="number"
-                  value={newServiceData.stock}
-                  onChange={(e) =>
-                    setNewServiceData({ ...newServiceData, stock: e.target.value })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded text-gray-900 font-medium"
-                  placeholder="e.g. 20"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Price (£)</label>
-                <input
-                  type="number"
-                  value={newServiceData.price}
-                  onChange={(e) =>
-                    setNewServiceData({ ...newServiceData, price: e.target.value })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded text-gray-900 font-medium"
-                  placeholder="e.g. 49.99"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={() => setShowAddModal(false)}
-              className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                const newProduct = {
-                  id: Date.now(),
-                  name: newServiceData.productName,
-                  stock: parseInt(newServiceData.stock),
-                  price: parseFloat(newServiceData.price)
-                };
-                setServicesAndProducts((prev) => {
-                  const existing = prev.find(
-                    (s) => s.serviceName.toLowerCase() === newServiceData.serviceName.toLowerCase()
-                  );
-                  if (existing) {
-                    return prev.map((s) =>
-                      s.serviceName.toLowerCase() === newServiceData.serviceName.toLowerCase()
-                        ? { ...s, products: [...s.products, newProduct] }
-                        : s
-                    );
-                  } else {
-                    return [
-                      ...prev,
-                      {
-                        serviceName: newServiceData.serviceName,
-                        products: [newProduct]
-                      }
-                    ];
-                  }
-                });
-                setShowAddModal(false);
-                setNewServiceData({ serviceName: '', productName: '', stock: '', price: '' });
-              }}
-              className="text-sm text-white bg-green-600 px-4 py-2 rounded hover:bg-green-700"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
-
-
-) 
+          ) 
+           : activeTab === 'services' ?  (
+          <ServicesAndStocks
+          />
+        ) 
           : (
             <>
               {/* Search bar for non-dashboard tabs */}
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <input
                   type="text"
                   placeholder="Search by name or company..."
@@ -1034,14 +843,13 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-800 placeholder-gray-400"
                 />
-              </div>
+              </div> */}
 
               {/* Content based on active tab */}
               {activeTab === 'orders' ? (
                 // Orders tab content
                 <div className="space-y-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">Order Management</h2>
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
@@ -1056,6 +864,12 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
                         <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
                       </button>
                     </div>
+                    <button
+                  onClick={handleDownloadCSV}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Export CSV
+                </button>
                   </div>
                   
                   {ordersLoading ? (
