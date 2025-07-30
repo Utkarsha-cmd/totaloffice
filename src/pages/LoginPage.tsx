@@ -26,9 +26,29 @@ const LoginPage = () => {
       setLoading(true);
       await login(email, password);
       navigate('/');
-    } catch (err) {
-      setError('Failed to log in');
+    } catch (err: any) {
       console.error('Login error:', err);
+      
+      // Handle specific error messages from the server
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (err.response.status === 401) {
+          setError('Invalid email or password. Please try again.');
+        } else if (err.response.status === 400) {
+          setError('Invalid request. Please check your input.');
+        } else if (err.response.data && err.response.data.message) {
+          setError(err.response.data.message);
+        } else {
+          setError('An error occurred during login. Please try again.');
+        }
+      } else if (err.request) {
+        // The request was made but no response was received
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else {
+        // Something happened in setting up the request
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

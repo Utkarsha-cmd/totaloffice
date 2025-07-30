@@ -46,17 +46,17 @@ const dummyCustomers = [
 
 const App = () => {
   // Initialize state from localStorage if available
-  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse' | null>(
+  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | null>(
     () => {
       const savedRole = localStorage.getItem('userRole');
-      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse' | null;
+      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | null;
     }
   );
   const [username, setUsername] = useState<string>(
     () => localStorage.getItem('username') || ''
   );
 
-  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician'| 'warehouse', username: string) => {
+  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff', username: string) => {
     console.log("User logged in:", role, username);
     // Save to state and localStorage
     setUserRole(role);
@@ -81,7 +81,9 @@ const App = () => {
     const savedUsername = localStorage.getItem('username');
     
     if (savedRole && savedUsername) {
-      setUserRole(savedRole as any);
+      // Convert 'warehouse' to 'warehouse_staff' for backward compatibility
+      const role = savedRole === 'warehouse' ? 'warehouse_staff' : savedRole;
+      setUserRole(role as any);
       setUsername(savedUsername);
     }
     setIsLoading(false);
@@ -117,6 +119,14 @@ const App = () => {
         return <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />;
       case "technician":
         return <div className="p-6 text-xl font-medium text-green-700">Technician dashboard coming soon...</div>;
+      case "warehouse_staff":
+        return (
+          <WarehouseDashboard
+            username={username}
+            userType={userRole}
+            onLogout={handleLogout}
+          />
+        );
       default:
         return <Navigate to="/login" replace />;
     }
@@ -191,9 +201,9 @@ const App = () => {
                 )}
               </ProtectedRoute>
             } />
-            <Route path="/warehouse" element={
+            <Route path="/warehouse_staff" element={
   <ProtectedRoute>
-    {userRole === 'warehouse' ? (
+    {userRole === 'warehouse_staff' ? (
       <WarehouseDashboard
         username={username}
         userType={userRole}

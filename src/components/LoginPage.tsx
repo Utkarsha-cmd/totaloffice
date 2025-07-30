@@ -11,11 +11,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface LoginPageProps {
-  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse', username: string) => void;
+  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff', username: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse'>('customer');
+  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff'>('customer');
   const [useremail, setUseremail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       const toastId = toast.loading('Signing in...');
       let response: LoginResponse;
       if (useremail.includes('warehouse')) {
-        response = { role: 'warehouse' };
+        response = { role: 'warehouse_staff' };
       } else {
         response = await login(useremail, password);
       }
@@ -59,7 +59,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       }
 
       const roleFromResponse = response.role?.toLowerCase();
-      const allowedRoles = ['customer', 'admin', 'staff', 'technician', 'warehouse'] as const;
+      const allowedRoles = ['customer', 'admin', 'staff', 'technician', 'warehouse_staff'] as const;
       type AllowedRole = typeof allowedRoles[number];
 
       const userRole: AllowedRole =
@@ -92,6 +92,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     { type: 'admin' as const, label: 'Admin', icon: Shield, color: 'from-green-50 to-emerald-50' },
     { type: 'staff' as const, label: 'Staff', icon: Users, color: 'from-green-50 to-emerald-50' },
     { type: 'technician' as const, label: 'Technician', icon: Wrench, color: 'from-green-50 to-emerald-50' },
+    { type: 'warehouse' as const, label: 'Warehouse Staff', icon: Users, color: 'from-green-50 to-emerald-50' },
   ];
 
   return (

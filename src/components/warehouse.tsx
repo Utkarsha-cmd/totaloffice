@@ -13,7 +13,7 @@ interface Order {
 
 interface WarehouseDashboardProps {
   username: string;
-  userType: 'warehouse';
+  userType: 'warehouse_staff';
   onLogout: () => void;
 }
 

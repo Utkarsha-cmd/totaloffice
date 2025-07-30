@@ -40,6 +40,7 @@ const deliveriesMock: Delivery[] = [
     },
     status: 'processing',
     trackingNumber: 'TRACK123456789',
+    isUpcoming: true, // Added missing required property
   },
 ];
 
@@ -62,7 +63,8 @@ interface CustomerInfo {
   email: string;
   phone: string;
   paymentMethod?: string;
-  address: {
+  billingAddress: string;
+  address?: {
     street: string;
     city: string;
     state: string;
@@ -103,12 +105,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     name: username,
     email: '',
     phone: '',
+    billingAddress: '',
     address: {
       street: '',
       city: '',
       state: '',
-      zipCode: '',
-    },
+      zipCode: ''
+    }
   });
   const [deliveries] = useState<Delivery[]>(deliveriesMock);
   const [searchTerm, setSearchTerm] = useState("");
@@ -134,10 +137,10 @@ const recentDeliveries = filteredDeliveries.filter(
   d => d.status === "delivered" || d.status === "cancelled"
 );
  
-  const [editedInfo, setEditedInfo] = useState<CustomerInfo>(() => ({
+  const [editedInfo, setEditedInfo] = useState<CustomerInfo>({
     ...customerInfo,
-    address: { ...customerInfo.address }
-  }));
+    billingAddress: customerInfo.billingAddress || ''
+  });
   const [document, setDocument] = useState<File | undefined>(undefined);
   
   // Fetch current authenticated user and their profile
@@ -182,7 +185,7 @@ const recentDeliveries = filteredDeliveries.filter(
             const fullName = (userData.firstName || '') + (userData.lastName ? ` ${userData.lastName}` : '');
               
             // Get the correct email (prioritize email over contact)
-            const userEmail = userData.email || userData.contact || prev.email || '';
+            const userEmail = userData.email || userData.contact || customerInfo.email || '';
             
             // Update customer info with the profile data
             setCustomerInfo(prev => ({
@@ -252,13 +255,13 @@ const recentDeliveries = filteredDeliveries.filter(
       name: customerInfo.name,
       email: customerInfo.email,
       phone: customerInfo.phone,
+      billingAddress: customerInfo.billingAddress,
       address: {
-        street: customerInfo.address.street,
-        city: customerInfo.address.city,
-        state: customerInfo.address.state,
-        zipCode: customerInfo.address.zipCode,
-      },
-      document: undefined // Initialize document as undefined
+        street: customerInfo.address?.street || '',
+        city: customerInfo.address?.city || '',
+        state: customerInfo.address?.state || '',
+        zipCode: customerInfo.address?.zipCode || ''
+      }
     });
    
     setIsEditing(true);
@@ -288,13 +291,13 @@ const recentDeliveries = filteredDeliveries.filter(
       formData.append('duration', userProfile?.duration);
      
       // Preserve existing services
-      if (userProfile?.services && userProfile.services.current && userProfile.services.current.length > 0) {
+      if (userProfile?.services?.current?.length > 0) {
         userProfile.services.current.forEach(service => {
           formData.append('currentServices', service);
         });
       }
      
-      if (userProfile?.services && userProfile.services.past && userProfile.services.past.length > 0) {
+      if (userProfile?.services?.past?.length > 0) {
         userProfile.services.past.forEach(service => {
           formData.append('pastServices', service);
         });
@@ -303,16 +306,16 @@ const recentDeliveries = filteredDeliveries.filter(
       // Update contact (email)
       formData.append('contact', editedInfo.email);
      
-      // Combine address fields
-      const fullAddress = [
-        editedInfo.address.street,
-        editedInfo.address.city,
-        editedInfo.address.state,
-        editedInfo.address.zipCode
-      ].filter(Boolean).join(',');
-     
-      formData.append('billingAddress', fullAddress);
-      formData.append('paymentInfo', userProfile?.paymentInfo);
+      // Format and clean the billing address before saving
+      const formattedBillingAddress = editedInfo.billingAddress
+        .split(',')
+        .map(part => part.trim())
+        .filter(part => part.length > 0)
+        .join(', ');
+      
+      // Use the formatted billing address
+      formData.append('billingAddress', formattedBillingAddress);
+      formData.append('paymentInfo', userProfile?.paymentInfo || '');
      
       // If editing document
       if (document) {
@@ -333,25 +336,19 @@ const recentDeliveries = filteredDeliveries.filter(
         name: editedInfo.name,
         email: editedInfo.email,
         phone: editedInfo.phone,
+        billingAddress: editedInfo.billingAddress,
         address: {
-          street: editedInfo.address.street,
-          city: editedInfo.address.city,
-          state: editedInfo.address.state,
-          zipCode: editedInfo.address.zipCode,
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
         },
       });
  
       // Reset edited info and document
       setEditedInfo({
-        name: editedInfo.name,
-        email: editedInfo.email,
-        phone: editedInfo.phone,
-        address: {
-          street: editedInfo.address.street,
-          city: editedInfo.address.city,
-          state: editedInfo.address.state,
-          zipCode: editedInfo.address.zipCode,
-        }
+        ...editedInfo,
+        billingAddress: editedInfo.billingAddress
       });
       setDocument(undefined);
  
@@ -441,22 +438,17 @@ const recentDeliveries = filteredDeliveries.filter(
     setUploadedDocs([]); 
   };
  
-  const updateField = (field: keyof CustomerInfo, value: string) => {
+  const updateField = (field: keyof Omit<CustomerInfo, 'address'>, value: string) => {
     setEditedInfo(prev => ({
       ...prev,
-      [field]: value,
-      document: prev.document 
+      [field]: value
     }));
   };
  
-  const updateAddressField = (
-    field: keyof CustomerInfo['address'],
-    value: string
-  ) => {
+  const updateBillingAddress = (value: string) => {
     setEditedInfo(prev => ({
       ...prev,
-      address: { ...prev.address, [field]: value },
-      document: prev.document 
+      billingAddress: value
     }));
   };
  
@@ -695,67 +687,25 @@ const recentDeliveries = filteredDeliveries.filter(
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Street */}
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="street" className="text-black">Street Address</Label>
-                    {isEditing ? (
-                      <Input
-                        id="street"
-                        value={editedInfo.address.street}
-                        onChange={(e) => updateAddressField('street', e.target.value)}
-                        className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-                      />
-                    ) : (
-                      <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.street}</p>
-                    )}
-                  </div>
-
-                  {/* City */}
+                {isEditing ? (
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-black">City</Label>
-                    {isEditing ? (
-                      <Input
-                        id="city"
-                        value={editedInfo.address.city}
-                        onChange={(e) => updateAddressField('city', e.target.value)}
-                        className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-                      />
-                    ) : (
-                      <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.city}</p>
-                    )}
+                    <Label htmlFor="billingAddress" className="text-black">Billing Address</Label>
+                    <textarea
+                      id="billingAddress"
+                      value={userProfile?.billingAddress || ''}
+                      onChange={(e) => updateBillingAddress(e.target.value)}
+                      className="w-full p-2 bg-white/80 border border-green-100 rounded-md focus:border-green-200 focus:ring-green-100 text-black min-h-[100px]"
+                      placeholder="Enter full billing address"
+                    />
                   </div>
-
-                  {/* State */}
+                ) : (
                   <div className="space-y-2">
-                    <Label htmlFor="state" className="text-black">State</Label>
-                    {isEditing ? (
-                      <Input
-                        id="state"
-                        value={editedInfo.address.state}
-                        onChange={(e) => updateAddressField('state', e.target.value)}
-                        className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-                      />
-                    ) : (
-                      <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.state}</p>
-                    )}
+                    <Label className="text-black">Billing Address</Label>
+                    <p className="p-2 bg-gray-25 rounded-md text-black">
+                      {userProfile?.billingAddress || 'No address available'}
+                    </p>
                   </div>
-
-                  {/* ZIP Code */}
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode" className="text-black">ZIP Code</Label>
-                    {isEditing ? (
-                      <Input
-                        id="zipCode"
-                        value={editedInfo.address.zipCode}
-                        onChange={(e) => updateAddressField('zipCode', e.target.value)}
-                        className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-                      />
-                    ) : (
-                      <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.zipCode}</p>
-                    )}
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

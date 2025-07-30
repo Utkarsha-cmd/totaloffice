@@ -78,6 +78,7 @@ interface OrderTabProps {
     email?: string;
     paymentMethod?: string;
     address?: Address;
+    billingAddress?: string | Address; // Allow billingAddress to be either string or Address
   };
 }
 
@@ -348,7 +349,7 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-          // Get customer data from props or localStorage
+          // Get customer data from props, localStorage, or user profile
       const getCustomerData = () => {
         try {
           console.log('Customer Info from props:', props); // Debug log
@@ -359,12 +360,79 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
           let email = ''; // Initialize email
           let paymentMethod = 'credit_card';
           
-          // Get data from props if available
+          // First, try to get user profile from localStorage
+          const userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+          
+          // If we have a user profile with billing address, use that
+          if (userProfile?.billingAddress) {
+            // Handle both string and Address object formats for billingAddress
+            if (typeof userProfile.billingAddress === 'string') {
+              // Clean up the string address
+              address = userProfile.billingAddress
+                .replace(/\s+/g, ' ')
+                .replace(/\s*,\s*/g, ', ')
+                .trim();
+            } else if (userProfile.billingAddress.street) {
+              // Convert Address object to formatted string
+              const { street = '', city = '', state = '', zipCode = '' } = userProfile.billingAddress;
+              address = [street, city, state, zipCode]
+                .filter(Boolean)
+                .join(', ')
+                .replace(/\s*,\s*/g, ', ')
+                .trim();
+            }
+            console.log('Using billing address from userProfile:', address);
+            
+            // Get name from user profile if available
+            if (userProfile.name) {
+              name = userProfile.name;
+              console.log('Using name from userProfile:', name);
+            }
+            
+            // Get email from user profile if available
+            if (userProfile.email) {
+              email = userProfile.email;
+              console.log('Using email from userProfile:', email);
+            }
+            
+            // Get payment method from user profile if available
+            if (userProfile.paymentMethod) {
+              paymentMethod = userProfile.paymentMethod;
+              console.log('Using payment method from userProfile:', paymentMethod);
+            }
+            
+            return { address, name, email, paymentMethod };
+          }
+          
+          // Fallback to props if no user profile
           if (props?.customerInfo) {
-            // Get address from props
-            if (props.customerInfo.address) {
-              const { street, city, state, zipCode } = props.customerInfo.address;
-              address = [street, city, state, zipCode].filter(Boolean).join(', ');
+            // Get address from props if available
+            if (props.customerInfo.billingAddress) {
+              // Handle both string and Address object formats for billingAddress
+              if (typeof props.customerInfo.billingAddress === 'string') {
+                // Clean up the string address
+                address = props.customerInfo.billingAddress
+                  .replace(/\s+/g, ' ')
+                  .replace(/\s*,\s*/g, ', ')
+                  .trim();
+              } else if (props.customerInfo.billingAddress.street) {
+                // Convert Address object to formatted string
+                const { street = '', city = '', state = '', zipCode = '' } = props.customerInfo.billingAddress;
+                address = [street, city, state, zipCode]
+                  .filter(Boolean)
+                  .join(', ')
+                  .replace(/\s*,\s*/g, ', ')
+                  .trim();
+              }
+              console.log('Using billing address from props:', address);
+            } else if (props.customerInfo.address) {
+              // Fallback to old address format if billingAddress not available
+              const { street = '', city = '', state = '', zipCode = '' } = props.customerInfo.address;
+              address = [street, city, state, zipCode]
+                .filter(Boolean)
+                .join(', ')
+                .replace(/\s*,\s*/g, ', ')
+                .trim();
               console.log('Using address from props:', address);
             }
             
@@ -389,32 +457,36 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
             return { address, name, email, paymentMethod };
           }
           
-          // Fallback to localStorage if no props
+          // Fallback to localStorage if no props or user profile
           const storedProfile = localStorage.getItem('customerInfo');
           if (storedProfile) {
             const profile = JSON.parse(storedProfile);
             
             // Get address from localStorage
-            if (profile?.address) {
+            if (profile?.billingAddress) {
+              address = profile.billingAddress;
+              console.log('Using billing address from localStorage:', address);
+            } else if (profile?.address) {
+              // Fallback to old address format if billingAddress not available
               const { street, city, state, zipCode } = profile.address;
-              address = [street, city, state, zipCode].filter(Boolean).join(', ');
+              address = [street, city, state, zipCode].filter(Boolean).join(',').replace(/,\s+/g, ', ').trim();
               console.log('Using address from localStorage:', address);
             }
             
             // Get name from localStorage
-            if (profile?.name) {
+            if (profile.name) {
               name = profile.name;
               console.log('Using name from localStorage:', name);
             }
             
             // Get email from localStorage
-            if (profile?.email) {
+            if (profile.email) {
               email = profile.email;
               console.log('Using email from localStorage:', email);
             }
             
             // Get payment method from localStorage
-            if (profile?.paymentMethod) {
+            if (profile.paymentMethod) {
               paymentMethod = profile.paymentMethod;
               console.log('Using payment method from localStorage:', paymentMethod);
             }
@@ -439,31 +511,68 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
         name: customerName, 
         paymentMethod, 
         email: customerEmail 
-      } = getCustomerData();
+      } = getCustomerData() as { address: string | Address; name: string; paymentMethod: string; email: string };
       
       console.log('Final shipping address:', shippingAddress); // Debug log
 
-      // Format the shipping address as a single string
-      let formattedAddress: string;
+      // Format the shipping address as a single string with postcode
+      let formattedAddress = '';
       
-      if (typeof shippingAddress === 'string') {
-        // If it's already a string, use it as is
-        formattedAddress = shippingAddress;
-      } else if (shippingAddress && typeof shippingAddress === 'object' && !Array.isArray(shippingAddress)) {
-        // If it's an address object, format it
-        const address = shippingAddress as Address;
-        formattedAddress = [
-          address.street,
-          address.city,
-          address.state,
-          address.zipCode
-        ].filter(Boolean).join(', ');
-      } else if (Array.isArray(shippingAddress)) {
-        // If it's an array, join it
-        formattedAddress = shippingAddress.filter(Boolean).join(', ');
-      } else {
-        // Fallback to empty string
-        formattedAddress = '';
+      // First, get the full billing address from user profile as it contains the complete address
+      const userProfile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+      const billingAddress = userProfile?.billingAddress;
+      
+      if (billingAddress) {
+        // Use the full billing address if available
+        if (typeof billingAddress === 'string') {
+          formattedAddress = billingAddress
+            .replace(/\s+/g, ' ')
+            .replace(/\s*,\s*/g, ', ')
+            .trim();
+        } else if (billingAddress.street) {
+          // If it's an address object, format it properly
+          const { street = '', city = '', state = '', zipCode = '' } = billingAddress;
+          formattedAddress = [street, city, state, zipCode]
+            .filter(Boolean)
+            .join(', ')
+            .replace(/\s*,\s*/g, ', ')
+            .trim();
+        }
+      }
+      
+      // Fallback to the provided shipping address if we couldn't get the billing address
+      if (!formattedAddress) {
+        if (typeof shippingAddress === 'string') {
+          formattedAddress = shippingAddress
+            .replace(/\s+/g, ' ')
+            .replace(/\s*,\s*/g, ', ')
+            .trim();
+        } else if (shippingAddress && typeof shippingAddress === 'object' && !Array.isArray(shippingAddress)) {
+          const { street = '', city = '', state = '', zipCode = '' } = shippingAddress;
+          formattedAddress = [street, city, state, zipCode]
+            .filter(Boolean)
+            .join(', ')
+            .replace(/\s*,\s*/g, ', ')
+            .trim();
+        } else if (Array.isArray(shippingAddress)) {
+          formattedAddress = shippingAddress
+            .filter(Boolean)
+            .join(', ')
+            .replace(/\s*,\s*/g, ', ')
+            .trim();
+        }
+      }
+      
+      console.log('Formatted shipping address:', formattedAddress);
+      
+      // Ensure we have a valid address
+      if (!formattedAddress) {
+        throw new Error('Please provide a valid shipping address');
+      }
+      
+      // Ensure the postcode is included in the address
+      if (formattedAddress && !/\b[A-Z0-9]{1,4}\s*[A-Z0-9]{1,4}\b/i.test(formattedAddress)) {
+        console.warn('Warning: Shipping address appears to be missing a postcode');
       }
 
       const orderData = {
