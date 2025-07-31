@@ -168,7 +168,7 @@ export const orderService = {
   },
 
   // Handle authentication errors
-  private handleAuthError(error: any): void {
+  handleAuthError(error: any): void {
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Handle unauthorized/forbidden errors
       const user = JSON.parse(localStorage.getItem('user') || '{}');

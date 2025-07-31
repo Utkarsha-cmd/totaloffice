@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Package,
-  MapPin,
-  CreditCard,
-  Truck,
-  CheckCircle,
-  Clock,
-  XCircle,
-  AlertCircle,
-  CalendarCheck,
-  CalendarPlus
-} from 'lucide-react';
+import {Package, MapPin, CreditCard, Truck, CheckCircle, Clock, XCircle, AlertCircle, CalendarCheck, CalendarPlus} from 'lucide-react';
 import { Order } from '../hooks/order';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -18,7 +7,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { orderService } from '@/services/orderService';
+import jsPDF from 'jspdf';
+import "jspdf-autotable";
+import logo from '../assets/logo.png';
+import { saveAs } from 'file-saver';
 
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+    lastAutoTable?: {
+      finalY: number;
+    };
+  }
+}
 interface OrderCardProps {
   order: Order;
   onStatusUpdate?: (orderId: string, status: Order['status']) => void;
@@ -29,7 +30,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
   const [date, setDate] = useState<Date | undefined>(
     order.expectedDelivery ? new Date(order.expectedDelivery) : undefined
   );
-
+  
   const handleDateChange = async (newDate: Date | undefined) => {
     if (!newDate) return;
     
@@ -119,32 +120,180 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
       }
     }
   };
+  
 
-  const handleConfirmOrder = () => {
-    if (onStatusUpdate && order.status === 'pending') {
-      onStatusUpdate(order._id, 'processing');
-    }
+    const handleConfirmOrder = async () => {
+        if (onStatusUpdate && order.status === 'pending') {
+        try {
+            await orderService.updateOrderStatus(order._id, 'processing');
+            onStatusUpdate(order._id, 'processing');
+        } catch (error) {
+            console.error('Failed to update order status:', error);
+            // Optionally show error toast here
+        }
+        }
+    };
+
+const handleDownloadInvoice = async () => {
+  const doc = new jsPDF();
+  let y = 20;
+
+  // Convert logo to base64
+  const getImageBase64 = (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject('Canvas context not found');
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/png');
+        resolve(dataURL);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
   };
 
-  const handleDownloadInvoice = () => {
-    const invoiceContent = `
-      Order Invoice
-      -------------
-      Order Number: ${order.orderNumber}
-      Customer: ${order.customerName}
-      Email: ${order.customerEmail}
-      Total: ${formatCurrency(order.total)}
-      Status: ${order.status}
-      Items:
-      ${order.items.map((item) => `- ${item.name} (x${item.quantity})`).join('\n')}
-    `;
+  const logoBase64 = await getImageBase64(logo);
 
-    const blob = new Blob([invoiceContent], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Invoice_${order.orderNumber}.txt`;
-    link.click();
-  };
+  // Green Header
+  doc.setFillColor(173, 225, 157);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setFontSize(22);
+  doc.setTextColor(40);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INVOICE', 60, 20);
+
+  // Logo in header
+  doc.addImage(logoBase64, 'PNG', 14, 6, 30, 18); // x, y, width, height
+
+  // Invoice Info (top right)
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`INVOICE NO: ${order.orderNumber}`, 150, 10);
+  doc.text(`INVOICE DATE: ${order.orderDate}`, 150, 16);
+
+  // Company and Client Info
+  y = 40;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('YOUR COMPANY NAME', 14, y);
+  doc.text('BILLED TO', 110, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  const left = [
+    'Address: 14256 Street Name',
+    'City, State Zip Code',
+    'Phone:',
+    'Email:',
+    'Website:'
+  ];
+  const right = [
+    `Client Name: ${order.customerName}`,
+    `Company: ${order.shippingAddress.company || ''}`,
+    `Email: ${order.customerEmail || ''}`
+  ];
+  left.forEach((line, i) => {
+    doc.text(line, 14, y + 6 + i * 6);
+  });
+  right.forEach((line, i) => {
+    doc.text(line, 110, y + 6 + i * 6);
+  });
+
+  // Table headers
+  y += 50;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setDrawColor(200);
+  doc.line(14, y, 195, y); // top line
+  y += 6;
+  doc.text('ITEM NO.', 14, y);
+  doc.text('PRODUCT/SERVICE', 40, y);
+  doc.text('QTY', 120, y, { align: 'right' });
+  doc.text('UNIT PRICE', 140, y, { align: 'right' });
+  doc.text('TOTAL', 195, y, { align: 'right' });
+  y += 4;
+  doc.setLineWidth(0.2);
+  doc.line(14, y, 195, y); // bottom line
+  y += 6;
+
+  // Table items
+  doc.setFont('helvetica', 'normal');
+  order.items.forEach((item, index) => {
+    const itemTotal = item.quantity * item.price;
+    doc.text(String(100 + index), 14, y);
+    doc.text(item.name, 40, y);
+    doc.text(String(item.quantity), 120, y, { align: 'right' });
+    doc.text(formatCurrency(item.price), 140, y, { align: 'right' });
+    doc.text(formatCurrency(itemTotal), 195, y, { align: 'right' });
+    y += 8;
+  });
+
+  // Summary values
+  y += 8;
+  const rightAlign = 195;
+  const summary = [
+    ['SUBTOTAL', formatCurrency(order.subtotal)],
+    ['TAX (8%)', formatCurrency(order.tax)],
+  ];
+  summary.forEach(([label, value]) => {
+    doc.text(label, 140, y, { align: 'right' });
+    doc.text(value, rightAlign, y, { align: 'right' });
+    y += 6;
+  });
+
+  // Amount Due (green box)
+  doc.setFillColor(173, 225, 157); // green background
+  doc.rect(140, y, 55, 10, 'F');
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AMOUNT DUE', 144, y + 7);
+  doc.text(formatCurrency(order.total), 195, y + 7, { align: 'right' });
+
+  // Footer
+  y += 20;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(50);
+  doc.text('Make all checks payable to COMPANY NAME', 14, y);
+  doc.text('If you have any questions about this invoice, please contact us using the below details.', 14, y + 6);
+  doc.text('Company Phone Number, Email', 14, y + 12);
+
+  doc.save(`Invoice_${order.orderNumber}.pdf`);
+};
+;
+
+//   const handleDownloadInvoice = () => {
+//   const doc = new jsPDF();
+
+//   doc.setFontSize(16);
+//   doc.text('Order Invoice', 10, 10);
+//   doc.setFontSize(12);
+//   doc.text('-------------------------', 10, 16);
+
+//   doc.text(`Order Number: ${order.orderNumber}`, 10, 26);
+//   doc.text(`Customer: ${order.customerName}`, 10, 34);
+//   doc.text(`Email: ${order.customerEmail}`, 10, 42);
+//   doc.text(`Total: ${formatCurrency(order.total)}`, 10, 50);
+//   doc.text(`Status: ${order.status}`, 10, 58);
+
+//   doc.text('Items:', 10, 68);
+//   order.items.forEach((item, index) => {
+//     const y = 76 + index * 8;
+//     doc.text(`- ${item.name} (x${item.quantity}) - ${formatCurrency(item.price)} each`, 10, y);
+//   });
+
+//   doc.save(`Invoice_${order.orderNumber}.pdf`);
+// };
+
+
+
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
@@ -407,3 +556,105 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
 };
 
 export default OrderCard;
+export const generateInvoicePDF = async (order: Order): Promise<Blob> => {
+  const doc = new jsPDF();
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+    }).format(amount);
+
+  // Convert logo to Base64
+  const toBase64 = (url: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) reject();
+        ctx!.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
+  const logoBase64 = await toBase64(logo);
+
+  // Header
+  doc.setFillColor(173, 225, 157);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setFontSize(22);
+  doc.setTextColor(40);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INVOICE', 60, 20);
+  doc.addImage(logoBase64, 'PNG', 14, 6, 30, 18);
+
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text(`INVOICE NO: ${order.orderNumber}`, 150, 10);
+  doc.text(`CUSTOMER: ${order.customerName}`, 150, 16);
+
+  // Order details
+  let y = 40;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Email: ${order.customerEmail}`, 14, y += 8);
+  doc.text(`Status: ${order.status}`, 14, y += 8);
+  doc.text(`Total: ${formatCurrency(order.total)}`, 14, y += 8);
+
+  // Items
+  y += 12;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Items', 14, y);
+  doc.setFont('helvetica', 'normal');
+
+  y += 6;
+  order.items.forEach((item) => {
+    const itemTotal = formatCurrency(item.price * item.quantity);
+    doc.text(`• ${item.name}`, 16, y);
+    doc.text(`Qty: ${item.quantity}`, 100, y);
+    doc.text(`${formatCurrency(item.price)} each`, 140, y);
+    doc.text(`Total: ${itemTotal}`, 180, y, { align: 'right' });
+    y += 8;
+  });
+
+  y += 10;
+  doc.setFontSize(10);
+  doc.text('Thank you for your business!', 14, y);
+
+  return doc.output('blob');
+};
+// export const generateInvoicePDF = (order: Order): Blob => {
+//   const doc = new jsPDF();
+
+//   const formatCurrency = (amount: number) => {
+//     return new Intl.NumberFormat('en-GB', {
+//       style: 'currency',
+//       currency: 'GBP'
+//     }).format(amount);
+//   };
+
+//   doc.setFontSize(16);
+//   doc.text('Order Invoice', 10, 10);
+//   doc.setFontSize(12);
+//   doc.text('-------------------------', 10, 16);
+
+//   doc.text(`Order Number: ${order.orderNumber}`, 10, 26);
+//   doc.text(`Customer: ${order.customerName}`, 10, 34);
+//   doc.text(`Email: ${order.customerEmail}`, 10, 42);
+//   doc.text(`Total: ${formatCurrency(order.total)}`, 10, 50);
+//   doc.text(`Status: ${order.status}`, 10, 58);
+
+//   doc.text('Items:', 10, 68);
+//   order.items.forEach((item, index) => {
+//     const y = 76 + index * 8;
+//     doc.text(`- ${item.name} (x${item.quantity}) - ${formatCurrency(item.price)} each`, 10, y);
+//   });
+
+//   return doc.output('blob');
+// };

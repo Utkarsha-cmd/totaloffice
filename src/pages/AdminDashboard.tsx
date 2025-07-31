@@ -1,11 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect,useMemo } from 'react';
 import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Order } from '../hooks/order';
 import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
+import { generateInvoicePDF } from '../components/OrderCard';
 import ServicesAndStocks from '@/components/ServiceandStock';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 interface AdminDashboardProps {
   username: string;
@@ -51,11 +54,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [addressError, setAddressError] = useState('');
+  const [orderType, setOrderType] = useState<'all' | 'received' | 'delivered'>('all');
+const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yearly'>('today');
+
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [servicesAndProducts, setServicesAndProducts] = useState<
   { serviceName: string; products: { id: number; name: string; stock: number; price: number }[] }[]
 >([]);
+  
 
   // Dashboard data
   const [dashboardStats, setDashboardStats] = useState({
@@ -354,6 +361,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
       setError(err.message || 'Failed to export CSV');
     }
   };
+  const handleExportAllInvoices = async (orders: Order[]) => {
+  const zip = new JSZip();
+
+  for (const order of orders) {
+    const pdfBlob = generateInvoicePDF(order);
+    zip.file(`Invoice_${order.orderNumber}.pdf`, pdfBlob);
+  }
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  saveAs(content, 'All_Invoices.zip');
+};
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -549,9 +567,29 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
   setEditingProductId(null);
 };
 
+const getFilteredData = (data: any[]) => {
+  return data.map(item => {
+    const filteredItem: any = { name: item.name };
+    if (orderType === 'all' || orderType === 'received') {
+      filteredItem.orders = item.orders;
+    }
+    if (orderType === 'all' || orderType === 'delivered') {
+      filteredItem.delivered = item.delivered;
+    }
+    return filteredItem;
+  });
+};
+
+const chartData = useMemo(() => {
+  const baseData = dateRange === 'monthly' || dateRange === 'yearly' ? monthlyData : weeklyData;
+  return getFilteredData(baseData);
+}, [dateRange, orderType, weeklyData, monthlyData]);
+
+
 
   // Dashboard Statistics Cards Component
   const DashboardStats = () => (
+    
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
       <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
@@ -602,6 +640,20 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
       </div>
+      <div>
+        <label className="text-sm font-medium text-gray-700 mr-2">Date Range:</label>
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value as 'today' | 'weekly' | 'monthly' | 'yearly')}
+          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-green-800"
+        >
+          <option value="today">Today</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+
     </div>
   );
 
@@ -847,7 +899,6 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
 
               {/* Content based on active tab */}
               {activeTab === 'orders' ? (
-                // Orders tab content
                 <div className="space-y-6">
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center space-x-2">
@@ -865,7 +916,7 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
                       </button>
                     </div>
                     <button
-                  onClick={handleDownloadCSV}
+                  onClick={() => handleExportAllInvoices(orders)}
                   className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
                   Export CSV
@@ -970,7 +1021,9 @@ const handleSaveEdit = (productId: number, serviceName: string) => {
                                         </ul>
                                         <div className="mt-2">
                                         <a
-                                          href={`/customer-history/${customer._id}`}
+                                          // href={`/customer-history/${customer._id}`}
+                                          href={`/customer-history/${encodeURIComponent(customer.email || '')}`}
+                                          // href={`/customer-history/${encodeURIComponent('john@example.com')}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="text-sm text-blue-600 hover:underline"
