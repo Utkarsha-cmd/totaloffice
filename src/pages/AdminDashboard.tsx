@@ -1,14 +1,11 @@
-import React, { useState, useRef, useEffect,useMemo } from 'react';
-import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { LayoutDashboard, Users, Clock, Menu, X, History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Order } from '../hooks/order';
 import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
-import { generateInvoicePDF } from '../components/OrderCard';
 import ServicesAndStocks from '@/components/ServiceandStock';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 
 interface AdminDashboardProps {
   username: string;
@@ -17,6 +14,20 @@ interface AdminDashboardProps {
 }
 
 import { User, userService } from '../services/userService';
+import { serviceApi } from '../services/api';
+
+interface ServiceProduct {
+  _id: string;
+  name: string;
+  stock: number;
+  price: number;
+}
+
+interface Service {
+  _id: string;
+  serviceName: string;
+  products: ServiceProduct[];
+}
 
 interface UserWithFile extends Omit<User, 'document'> {
   document?: File | null;
@@ -25,13 +36,14 @@ interface UserWithFile extends Omit<User, 'document'> {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onLogout }) => {
   const [customers, setCustomers] = useState<UserWithFile[]>([]);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'details'| 'orders'| "services">("details");
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'orders' | "services">("details");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showHistory, setShowHistory] = useState<{[key: string]: boolean}>({});
+  const [showHistory, setShowHistory] = useState<{ [key: string]: boolean }>({});
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
     firstName: '',
     lastName: '',
@@ -45,24 +57,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
     billingAddress: '',
     paymentInfo: '',
   });
-  
+
   const [editingCustomer, setEditingCustomer] = useState<UserWithFile | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
   const [postcode, setPostcode] = useState('');
+
+  // Fetch available services
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const services = await serviceApi.getServices();
+        setAvailableServices(services);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      }
+    };
+
+    fetchServices();
+  }, []);
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [addressError, setAddressError] = useState('');
-  const [orderType, setOrderType] = useState<'all' | 'received' | 'delivered'>('all');
-const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yearly'>('today');
-
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [servicesAndProducts, setServicesAndProducts] = useState<
-  { serviceName: string; products: { id: number; name: string; stock: number; price: number }[] }[]
->([]);
-  
+    { serviceName: string; products: { id: number; name: string; stock: number; price: number }[] }[]
+  >([]);
 
   // Dashboard data
   const [dashboardStats, setDashboardStats] = useState({
@@ -74,9 +96,9 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
   });
 
   // State for chart data
-  const [weeklyData, setWeeklyData] = useState<Array<{name: string, orders: number, delivered: number}>>([]);
-  const [monthlyData, setMonthlyData] = useState<Array<{name: string, orders: number, delivered: number}>>([]);
-  const [serviceDistribution, setServiceDistribution] = useState<Array<{name: string, value: number, color: string}>>([]);
+  const [weeklyData, setWeeklyData] = useState<Array<{ name: string, orders: number, delivered: number }>>([]);
+  const [monthlyData, setMonthlyData] = useState<Array<{ name: string, orders: number, delivered: number }>>([]);
+  const [serviceDistribution, setServiceDistribution] = useState<Array<{ name: string, value: number, color: string }>>([]);
 
   // Process orders data for charts
   const processOrdersData = (orders: Order[]) => {
@@ -92,7 +114,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
         const orderDate = new Date(order.orderDate);
         return orderDate.toLocaleDateString('en-US', { weekday: 'short' }) === day;
       });
-      
+
       return {
         name: day,
         orders: dayOrders.length,
@@ -112,7 +134,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
         const orderDate = new Date(order.orderDate);
         return orderDate.toLocaleDateString('en-US', { month: 'short' }) === month;
       });
-      
+
       return {
         name: month,
         orders: monthOrders.length,
@@ -122,9 +144,9 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
 
     // Process service distribution - Always show exactly 11 services
     const allServices = [
-      'Totally Tasty', 
-      'Cleaning Supplies', 
-      'Business Supplies', 
+      'Totally Tasty',
+      'Cleaning Supplies',
+      'Business Supplies',
       'Print Services',
       'Office Furniture',
       'IT Equipment',
@@ -136,12 +158,12 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
     ];
 
     const serviceMap = new Map<string, number>();
-    
+
     // Initialize all services with 0 count
     allServices.forEach(service => {
       serviceMap.set(service, 0);
     });
-    
+
     // Update counts from orders
     orders.forEach(order => {
       order.items.forEach(item => {
@@ -159,7 +181,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5',
       '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534'
     ];
-    
+
     const distribution = Array.from(serviceMap.entries())
       .map(([name, value], index) => ({
         name,
@@ -197,19 +219,19 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
           orderService.getOrders(),
           userService.getUsers('')
         ]);
-        
+
         setOrders(ordersData);
         setCustomers(customersData);
         processOrdersData(ordersData);
-        
+
         setDashboardStats({
           totalOrders: ordersData.length,
           totalCustomers: customersData.length,
           totalServices: 11, // Always show 11 services
-          ordersReceived: ordersData.filter(order => 
+          ordersReceived: ordersData.filter(order =>
             ['pending', 'processing', 'shipped', 'delivered'].includes(order.status)
           ).length,
-          ordersDelivered: ordersData.filter(order => 
+          ordersDelivered: ordersData.filter(order =>
             order.status === 'delivered'
           ).length
         });
@@ -234,7 +256,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
     try {
       const ordersData = await orderService.getOrders();
       const customersData = await userService.getUsers('');
-      
+
       setDashboardStats({
         totalOrders: ordersData.length,
         totalCustomers: customersData.length,
@@ -252,17 +274,17 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       setAddressError('Please enter a postcode');
       return;
     }
-    
+
     setIsLoadingAddress(true);
     setAddressError('');
-    
+
     try {
       const formattedPostcode = postcode.replace(/\s+/g, '').toUpperCase();
       const apiKey = 'pdSw7G1TEk6kghR1DNzddQ41182';
       const lookupResponse = await fetch(
         `https://api.getaddress.io/find/${encodeURIComponent(formattedPostcode)}?api-key=${apiKey}&expand=true`
       );
-      
+
       if (!lookupResponse.ok) {
         throw new Error('Address lookup failed');
       }
@@ -277,22 +299,22 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
             addr.county,
             formattedPostcode
           ].filter(Boolean);
-          
+
           return parts.join(', ');
         });
-        
+
         setAddressSuggestions(formattedAddresses);
       } else {
         const autoCompleteResponse = await fetch(
           `https://api.getaddress.io/autocomplete/${encodeURIComponent(formattedPostcode)}?api-key=${apiKey}`
         );
-        
+
         if (!autoCompleteResponse.ok) {
           throw new Error('Address lookup failed');
         }
-        
+
         const autoCompleteData = await autoCompleteResponse.json();
-        
+
         if (autoCompleteData.suggestions && autoCompleteData.suggestions.length > 0) {
           setAddressSuggestions(autoCompleteData.suggestions);
         } else {
@@ -308,7 +330,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       setIsLoadingAddress(false);
     }
   };
-  
+
   const handleAddressSelect = (address: string) => {
     setNewCustomer(prev => ({
       ...prev,
@@ -320,16 +342,16 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, tab: 'dashboard', current: activeTab === 'dashboard' },
     { name: 'User Details', icon: Users, tab: 'details', current: activeTab === 'details' },
-    { name: 'Orders', tab: 'orders',  icon: Package, current: activeTab === 'orders' },
+    { name: 'Orders', tab: 'orders', icon: Package, current: activeTab === 'orders' },
     { name: 'Services and Stocks', tab: 'services', icon: Truck, current: activeTab === 'services' },
   ];
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newServiceData, setNewServiceData] = useState({
-     serviceName: '',
-     productName: '',
-     stock: '',
-     price: ''
+    serviceName: '',
+    productName: '',
+    stock: '',
+    price: ''
   });
 
   const fetchOrders = async () => {
@@ -361,17 +383,6 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       setError(err.message || 'Failed to export CSV');
     }
   };
-  const handleExportAllInvoices = async (orders: Order[]) => {
-  const zip = new JSZip();
-
-  for (const order of orders) {
-    const pdfBlob = generateInvoicePDF(order);
-    zip.file(`Invoice_${order.orderNumber}.pdf`, pdfBlob);
-  }
-
-  const content = await zip.generateAsync({ type: 'blob' });
-  saveAs(content, 'All_Invoices.zip');
-};
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,7 +390,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       setError('First name and email are required');
       return;
     }
-    
+
     try {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newCustomer.email)) {
@@ -398,11 +409,11 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       formData.append('services', JSON.stringify(newCustomer.services || { current: [], past: [] }));
       formData.append('billingAddress', newCustomer.billingAddress || '');
       formData.append('paymentInfo', newCustomer.paymentInfo || '');
-      
+
       if (newCustomer.document) {
         formData.append('document', newCustomer.document);
       }
-      
+
       await userService.createUser(formData);
       fetchCustomers();
       setNewCustomer({
@@ -426,8 +437,8 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
       setError(err.message || 'Failed to add user');
     }
   };
- 
-  
+
+
   const handleEditCustomer = (customer: UserWithFile) => {
     setEditingCustomer({
       ...customer,
@@ -452,11 +463,11 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
 
   const handleUpdateCustomer = async () => {
     if (!editingCustomer) return;
-    
+
     try {
       setLoading(true);
       setError('');
-      
+
       const formData = new FormData();
       const { document: doc, services, ...rest } = editingCustomer;
       const userData = {
@@ -464,7 +475,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
         lastName: rest.lastName || '',
         services: services || { current: [], past: [] }
       };
-      
+
       Object.entries(userData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           if (key === 'services') {
@@ -474,11 +485,11 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
           }
         }
       });
-      
+
       if (doc && doc instanceof File) {
         formData.append('document', doc);
       }
-      
+
       await userService.updateUser(editingCustomer._id, formData);
       fetchCustomers();
       setEditingCustomer(null);
@@ -505,7 +516,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
     } catch (err: any) {
       console.error('Error in fetchCustomers:', err);
       setError(err.message || 'Failed to fetch users');
-      setCustomers([]); 
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -515,7 +526,7 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await userService.deleteUser(id);
-        fetchCustomers(); 
+        fetchCustomers();
       } catch (err: any) {
         setError(err.message || 'Failed to delete user');
       }
@@ -526,14 +537,14 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
     const delayDebounceFn = setTimeout(() => {
       fetchCustomers();
     }, 500);
-    
+
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
   const filteredCustomers = customers.filter(customer => {
     const searchLower = searchTerm.toLowerCase();
     const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
-    
+
     return (
       fullName.includes(searchLower) ||
       (customer.email || '').toLowerCase().includes(searchLower) ||
@@ -544,52 +555,32 @@ const [dateRange, setDateRange] = useState<'today' | 'weekly' | 'monthly' | 'yea
   });
 
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
-const [editedProduct, setEditedProduct] = useState<{
-  id: number;
-  name: string;
-  stock: number;
-  price: number;
-}>({ id: 0, name: '', stock: 0, price: 0 });
+  const [editedProduct, setEditedProduct] = useState<{
+    id: number;
+    name: string;
+    stock: number;
+    price: number;
+  }>({ id: 0, name: '', stock: 0, price: 0 });
 
-const handleSaveEdit = (productId: number, serviceName: string) => {
-  setServicesAndProducts((prev) =>
-    prev.map((service) =>
-      service.serviceName === serviceName
-        ? {
+  const handleSaveEdit = (productId: number, serviceName: string) => {
+    setServicesAndProducts((prev) =>
+      prev.map((service) =>
+        service.serviceName === serviceName
+          ? {
             ...service,
             products: service.products.map((product) =>
               product.id === productId ? { ...product, ...editedProduct } : product
             )
           }
-        : service
-    )
-  );
-  setEditingProductId(null);
-};
-
-const getFilteredData = (data: any[]) => {
-  return data.map(item => {
-    const filteredItem: any = { name: item.name };
-    if (orderType === 'all' || orderType === 'received') {
-      filteredItem.orders = item.orders;
-    }
-    if (orderType === 'all' || orderType === 'delivered') {
-      filteredItem.delivered = item.delivered;
-    }
-    return filteredItem;
-  });
-};
-
-const chartData = useMemo(() => {
-  const baseData = dateRange === 'monthly' || dateRange === 'yearly' ? monthlyData : weeklyData;
-  return getFilteredData(baseData);
-}, [dateRange, orderType, weeklyData, monthlyData]);
-
+          : service
+      )
+    );
+    setEditingProductId(null);
+  };
 
 
   // Dashboard Statistics Cards Component
   const DashboardStats = () => (
-    
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
       <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
@@ -600,7 +591,7 @@ const chartData = useMemo(() => {
           <ShoppingCart className="h-8 w-8 text-green-600" />
         </div>
       </div>
-      
+
       <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -610,7 +601,7 @@ const chartData = useMemo(() => {
           <UserCheck className="h-8 w-8 text-green-600" />
         </div>
       </div>
-      
+
       {/* <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -620,7 +611,7 @@ const chartData = useMemo(() => {
           <Package className="h-8 w-8 text-green-600" />
         </div>
       </div> */}
-      
+
       <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -630,7 +621,7 @@ const chartData = useMemo(() => {
           <TrendingUp className="h-8 w-8 text-green-600" />
         </div>
       </div>
-      
+
       <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -640,20 +631,6 @@ const chartData = useMemo(() => {
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
       </div>
-      <div>
-        <label className="text-sm font-medium text-gray-700 mr-2">Date Range:</label>
-        <select
-          value={dateRange}
-          onChange={(e) => setDateRange(e.target.value as 'today' | 'weekly' | 'monthly' | 'yearly')}
-          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-green-800"
-        >
-          <option value="today">Today</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
-        </select>
-      </div>
-
     </div>
   );
 
@@ -685,7 +662,7 @@ const chartData = useMemo(() => {
             {navigation.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details'  | 'orders')}
+                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'orders')}
                 className={cn(
                   item.current
                     ? 'bg-green-50 text-green-700 border-r-4 border-green-600'
@@ -735,19 +712,19 @@ const chartData = useMemo(() => {
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' :activeTab==='orders'? 'Orders':'Services and Stocks'}
+                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders' : 'Services and Stocks'}
               </h1>
             </div>
 
             {activeTab == 'details' && (
               <div className="flex items-center space-x-3">
                 <input
-      type="text"
-      placeholder="Search"
-      value={searchTerm}
-      onChange={e => setSearchTerm(e.target.value)}
-      className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-800 placeholder-gray-400"
-    />
+                  type="text"
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-800 placeholder-gray-400"
+                />
                 <button
                   onClick={() => setShowAddForm(true)}
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -755,7 +732,7 @@ const chartData = useMemo(() => {
                   Add Customer
                 </button>
               </div>
-              
+
             )}
           </div>
         </div>
@@ -765,20 +742,20 @@ const chartData = useMemo(() => {
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
               {error}
-              <button 
-                onClick={() => setError('')} 
+              <button
+                onClick={() => setError('')}
                 className="ml-2 text-red-500 hover:text-red-700"
               >
                 ×
               </button>
             </div>
           )}
-          
+
           {/* Dashboard Content */}
           {activeTab === 'dashboard' ? (
             <div className="space-y-6">
               <DashboardStats />
-              
+
               {/* Charts Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Weekly Orders Chart */}
@@ -789,12 +766,12 @@ const chartData = useMemo(() => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="name" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#f0fdf4', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#f0fdf4',
                           border: '1px solid #bbf7d0',
                           borderRadius: '8px'
-                        }} 
+                        }}
                       />
                       <Bar dataKey="orders" fill="#10b981" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="delivered" fill="#34d399" radius={[4, 4, 0, 0]} />
@@ -810,24 +787,24 @@ const chartData = useMemo(() => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="name" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#f0fdf4', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#f0fdf4',
                           border: '1px solid #bbf7d0',
                           borderRadius: '8px'
-                        }} 
+                        }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="orders" 
-                        stroke="#10b981" 
+                      <Line
+                        type="monotone"
+                        dataKey="orders"
+                        stroke="#10b981"
                         strokeWidth={3}
                         dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="delivered" 
-                        stroke="#34d399" 
+                      <Line
+                        type="monotone"
+                        dataKey="delivered"
+                        stroke="#34d399"
                         strokeWidth={3}
                         dot={{ fill: '#34d399', strokeWidth: 2, r: 6 }}
                       />
@@ -879,15 +856,15 @@ const chartData = useMemo(() => {
                 </div>
               </div> */}
             </div>
-          ) 
-           : activeTab === 'services' ?  (
-          <ServicesAndStocks
-          />
-        ) 
-          : (
-            <>
-              {/* Search bar for non-dashboard tabs */}
-              {/* <div className="mb-4">
+          )
+            : activeTab === 'services' ? (
+              <ServicesAndStocks
+              />
+            )
+              : (
+                <>
+                  {/* Search bar for non-dashboard tabs */}
+                  {/* <div className="mb-4">
                 <input
                   type="text"
                   placeholder="Search by name or company..."
@@ -897,106 +874,107 @@ const chartData = useMemo(() => {
                 />
               </div> */}
 
-              {/* Content based on active tab */}
-              {activeTab === 'orders' ? (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        placeholder="Search orders..."
-                        className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                      <button 
-                        onClick={fetchOrders}
-                        className="p-1.5 text-gray-500 hover:text-gray-700"
-                        title="Refresh orders"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
-                      </button>
-                    </div>
-                    <button
-                  onClick={() => handleExportAllInvoices(orders)}
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Export CSV
-                </button>
-                  </div>
-                  
-                  {ordersLoading ? (
-                    <div className="flex justify-center items-center h-40">
-                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
-                    </div>
-                  ) : orders.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                      <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
-                      <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <OrderCard 
-                          key={order._id} 
-                          order={order} 
-                          onStatusUpdate={handleStatusUpdate}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Customer details/history tabs
-                <div>
-                  {filteredCustomers.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500">
-                      No customers found. Add a new customer to get started.
+                  {/* Content based on active tab */}
+                  {activeTab === 'orders' ? (
+                    // Orders tab content
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            placeholder="Search orders..."
+                            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          />
+                          <button
+                            onClick={fetchOrders}
+                            className="p-1.5 text-gray-500 hover:text-gray-700"
+                            title="Refresh orders"
+                          >
+                            <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={handleDownloadCSV}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          Export CSV
+                        </button>
+                      </div>
+
+                      {ordersLoading ? (
+                        <div className="flex justify-center items-center h-40">
+                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                        </div>
+                      ) : orders.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                          <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                          <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
+                          <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {orders.map((order) => (
+                            <OrderCard
+                              key={order._id}
+                              order={order}
+                              onStatusUpdate={handleStatusUpdate}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="grid gap-6">
-                      {filteredCustomers.map((customer) => (
-                        <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
-                          {activeTab === 'details' ? (
-                            <>
-                              <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">Company</p>
-                                  <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
-                                  
-                                  <p className="text-sm font-medium text-gray-700">Email</p>
-                                  <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
-                                  
-                                  <p className="text-sm font-medium text-gray-700">Phone</p>
-                                  <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
-                                  
-                                  <p className="text-sm font-medium text-gray-700">VAT Code</p>
-                                  <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                                  <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
-                                  
-                                  <p className="text-sm font-medium text-gray-700">Billing Address</p>
-                                  <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
-                                </div>
-                              </div>
-                              <div className="mt-4">
-                                <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
-                                    <ul className="list-disc list-inside">
-                                      {customer.services ?.current?.length > 0 ? (
-                                        customer.services.current.map((service, i) => (
-                                          <li key={i} className="text-sm text-gray-700">{service}</li>
-                                        ))
-                                      ) : (
-                                        <li className="text-sm text-gray-400">No current services</li>
-                                      )}
-                                    </ul>
+                    // Customer details/history tabs
+                    <div>
+                      {filteredCustomers.length === 0 ? (
+                        <div className="text-center py-10 text-gray-500">
+                          No customers found. Add a new customer to get started.
+                        </div>
+                      ) : (
+                        <div className="grid gap-6">
+                          {filteredCustomers.map((customer) => (
+                            <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
+                              {activeTab === 'details' ? (
+                                <>
+                                  <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Company</p>
+                                      <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
+
+                                      <p className="text-sm font-medium text-gray-700">Email</p>
+                                      <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
+
+                                      <p className="text-sm font-medium text-gray-700">Phone</p>
+                                      <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
+
+                                      <p className="text-sm font-medium text-gray-700">VAT Code</p>
+                                      <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Payment Info</p>
+                                      <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
+
+                                      <p className="text-sm font-medium text-gray-700">Billing Address</p>
+                                      <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
+                                    </div>
                                   </div>
-                                  {/* <div className="flex items-center justify-between mb-1">
+                                  <div className="mt-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div>
+                                        <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
+                                        <ul className="list-disc list-inside">
+                                          {customer.services?.current?.length > 0 ? (
+                                            customer.services.current.map((service, i) => (
+                                              <li key={i} className="text-sm text-gray-700">{service}</li>
+                                            ))
+                                          ) : (
+                                            <li className="text-sm text-gray-400">No current services</li>
+                                          )}
+                                        </ul>
+                                      </div>
+                                      {/* <div className="flex items-center justify-between mb-1">
                                       <p className="text-sm font-medium text-gray-700">Service History</p>
                                       <ul className='list-disc list-inside'>
                                          {customer.services?.past?.length > 0 ? (
@@ -1008,10 +986,10 @@ const chartData = useMemo(() => {
                                           )}
                                       </ul>    
                                     </div> */}
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-700 mb-1">Service History</p>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Service History</p>
                                         <ul className="list-disc list-inside">
-                                          {customer.services?.past ?.length > 0 ? (
+                                          {customer.services?.past?.length > 0 ? (
                                             customer.services.past.map((service, i) => (
                                               <li key={i} className="text-sm text-gray-500">{service}</li>
                                             ))
@@ -1020,114 +998,112 @@ const chartData = useMemo(() => {
                                           )}
                                         </ul>
                                         <div className="mt-2">
+                                          <a
+                                            href={`/customer-history/${customer._id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm text-blue-600 hover:underline"
+                                          >
+                                            View Full History
+                                          </a>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {customer.document && (
+                                    <div className="mt-4">
+                                      <p className="text-sm font-medium text-gray-700">Document</p>
+                                      {typeof customer.document === 'string' ? (
                                         <a
-                                          // href={`/customer-history/${customer._id}`}
-                                          href={`/customer-history/${encodeURIComponent(customer.email || '')}`}
-                                          // href={`/customer-history/${encodeURIComponent('john@example.com')}`}
+                                          href={`http://localhost:5000${customer.document}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="text-sm text-blue-600 hover:underline"
+                                        >
+                                          View Document
+                                        </a>
+                                      ) : (
+                                        <p className="text-sm text-blue-600">{customer.document.name}</p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="absolute top-4 right-4 flex space-x-2">
+                                    <button
+                                      onClick={() => handleEditCustomer(customer)}
+                                      className="text-blue-500 hover:text-blue-700 text-sm mr-2"
+                                      title="Edit Customer"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCustomer(customer._id || '')}
+                                      className="text-red-500 hover:text-red-700 text-sm"
+                                      title="Delete Customer"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
+                                      <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
+                                    </div>
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                      {customer.duration}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-4 space-y-3">
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-700">Payment Information</p>
+                                      <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div>
+                                        <p className="text-sm font-medium text-green-700">Current Services</p>
+                                        <ul className="mt-1 space-y-1">
+                                          {customer.services.current.map((service, i) => (
+                                            <li key={i} className="text-sm text-gray-700">• {service}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-700">Service History</p>
+                                        <ul className="mt-1 space-y-1">
+                                          {customer.services.past.map((service, i) => (
+                                            <li key={i} className="text-sm text-gray-500">• {service}</li>
+                                          ))}
+                                          {customer.services.past.length === 0 && (
+                                            <li className="text-sm text-gray-400">No past services</li>
+                                          )}
+                                        </ul>
+                                        <div className="mt-2">
+                                          <a
+                                            href={`/customer-history/${customer._id}`}
+                                            className="text-sm text-blue-600 hover:underline"
                                           >
                                             View Full History
-                                          </a>  
+                                          </a>
                                         </div>
                                       </div>
+                                    </div>
                                   </div>
-                                </div>
-                              {customer.document && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-700">Document</p>
-                          {typeof customer.document === 'string' ? (
-                            <a 
-                              href={`http://localhost:5000${customer.document}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:underline"
-                            >
-                              View Document
-                            </a>
-                          ) : (
-                            <p className="text-sm text-blue-600">{customer.document.name}</p>
-                          )}
+                                </>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
-                      
-                      <div className="absolute top-4 right-4 flex space-x-2">
-                        <button
-                          onClick={() => handleEditCustomer(customer)}
-                          className="text-blue-500 hover:text-blue-700 text-sm mr-2"
-                          title="Edit Customer"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCustomer(customer._id || '')}
-                          className="text-red-500 hover:text-red-700 text-sm"
-                          title="Delete Customer"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
-                                  <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
-                                </div>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                  {customer.duration}
-                                </span>
-                              </div>
-                              
-                              <div className="mt-4 space-y-3">
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">Payment Information</p>
-                                  <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
-                                </div>
-                            
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-green-700">Current Services</p>
-                                    <ul className="mt-1 space-y-1">
-                                      {customer.services.current.map((service, i) => (
-                                        <li key={i} className="text-sm text-gray-700">• {service}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-700">Service History</p>
-                                    <ul className="mt-1 space-y-1">
-                                      {customer.services.past.map((service, i) => (
-                                        <li key={i} className="text-sm text-gray-500">• {service}</li>
-                                      ))}
-                                      {customer.services.past.length === 0 && (
-                                        <li className="text-sm text-gray-400">No past services</li>
-                                      )}
-                                    </ul>
-                                    <div className="mt-2">
-                                      <a
-                                        href={`/customer-history/${customer._id}`}
-                                        className="text-sm text-blue-600 hover:underline"
-                                      >
-                                        View Full History
-                                      </a>  
-                                  </div>
-                                </div>
-                              </div>
-                            </div>  
-                            </>
-                          )}
-                        </div>
-                      ))}
                     </div>
                   )}
-                </div>
+                </>
               )}
-            </>
-          )}
-          
+
           {showAddForm && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
@@ -1270,61 +1246,55 @@ const chartData = useMemo(() => {
                   />
 
                   {/* 10. Services (multi-select) */}
-                          <div className="md:col-span-2 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
-            <div
-              className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
-              onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
-            >
-              {newCustomer.services.current.length > 0
-                ? newCustomer.services.current.join(', ')
-                : 'Select services'}
-            </div>
+                  <div className="md:col-span-2 relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+                    <div
+                      className="p-2 border border-black rounded cursor-pointer bg-white text-gray-900 font-semibold"
+                      onClick={() => setServiceDropdownOpen(!serviceDropdownOpen)}
+                    >
+                      {newCustomer.services.current.length > 0
+                        ? newCustomer.services.current.join(', ')
+                        : 'Select services'}
+                    </div>
 
-            {serviceDropdownOpen && (
-              <div
-                ref={dropdownRef}
-                className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
-              >
-                {[
-                  "Totally Tasty",
-                  "Cleaning and Janitorial Supplies",
-                  "Business Supplies",
-                  "Business Print",
-                  "Managed Print",
-                  "Mailroom Equipment",
-                  "Secure Shredding",
-                  "Workspace",
-                  "Office Plants & Plant Displays",
-                  "Workwear",
-                  "Defibrillators",
-                ].map((service) => (
-                  <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mr-2"
-                      checked={newCustomer.services.current.includes(service)}
-                      onChange={() => {
-                        const isChecked = newCustomer.services.current.includes(service);
-                        const updated = isChecked
-                          ? newCustomer.services.current.filter((s) => s !== service)
-                          : [...newCustomer.services.current, service];
-                        setNewCustomer({
-                          ...newCustomer,
-                          services: {
-                            ...newCustomer.services,
-                            current: updated,
-                          },
-                        });
-                      }}
-                    />
-                    {service}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+                    {serviceDropdownOpen && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
+                      >
+                        {availableServices.length > 0 ? (
+                          availableServices.map((service) => (
+                            <label
+                              key={service._id}
+                              className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                className="mr-2"
+                                checked={newCustomer.services.current.includes(service.serviceName)}
+                                onChange={() => {
+                                  const isChecked = newCustomer.services.current.includes(service.serviceName);
+                                  const updated = isChecked
+                                    ? newCustomer.services.current.filter((s) => s !== service.serviceName)
+                                    : [...newCustomer.services.current, service.serviceName];
+                                  setNewCustomer({
+                                    ...newCustomer,
+                                    services: {
+                                      ...newCustomer.services,
+                                      current: updated,
+                                    },
+                                  });
+                                }}
+                              />
+                              {service.serviceName}
+                            </label>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">No services available</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* 11. Past Services */}
                   <input
@@ -1374,75 +1344,75 @@ const chartData = useMemo(() => {
               </div>
             </div>
           )}
-                    {showEditForm && editingCustomer && (
-                      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
-                          <h2 className="text-xl font-semibold mb-4 text-blue-700">Edit Customer</h2>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            {/* Postcode Lookup */}
-                            <div className="space-y-2">
-                              <div className="relative">
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Enter UK Postcode (e.g., M3 1SH)"
-                                    value={postcode}
-                                    onChange={e => setPostcode(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
-                                    className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={handlePostcodeLookup}
-                                    disabled={isLoadingAddress}
-                                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-                                  >
-                                    {isLoadingAddress ? 'Looking...' : 'Find'}
-                                  </button>
-                                </div>
-                                
-                                {/* Address Dropdown */}
-                                {isLoadingAddress ? (
-                                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
-                                    <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
-                                  </div>
-                                ) : addressSuggestions.length > 0 ? (
-                                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                                    <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
-                                      Found {addressSuggestions.length} addresses:
-                                    </div>
-                                    {addressSuggestions.map((address, index) => (
-                                      <div
-                                        key={index}
-                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                        onClick={() => {
-                                          setEditingCustomer({...editingCustomer, billingAddress: address});
-                                          setAddressSuggestions([]);
-                                        }}
-                                      >
-                                        {address}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </div>
-                              
-                              {addressError && (
-                                <p className="text-red-500 text-sm">{addressError}</p>
-                              )}
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
-                                <input
-                                  type="text"
-                                  placeholder="Address will appear here after selection"
-                                  value={editingCustomer.billingAddress}
-                                  onChange={e => setEditingCustomer({ ...editingCustomer, billingAddress: e.target.value })}
-                                  className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                                />
-                              </div>
+          {showEditForm && editingCustomer && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
+                <h2 className="text-xl font-semibold mb-4 text-blue-700">Edit Customer</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Postcode Lookup */}
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter UK Postcode (e.g., M3 1SH)"
+                          value={postcode}
+                          onChange={e => setPostcode(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handlePostcodeLookup()}
+                          className="flex-1 p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={handlePostcodeLookup}
+                          disabled={isLoadingAddress}
+                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {isLoadingAddress ? 'Looking...' : 'Find'}
+                        </button>
+                      </div>
+
+                      {/* Address Dropdown */}
+                      {isLoadingAddress ? (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg p-2">
+                          <div className="text-sm text-gray-600 py-1">Searching for addresses...</div>
+                        </div>
+                      ) : addressSuggestions.length > 0 ? (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                          <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-b">
+                            Found {addressSuggestions.length} addresses:
+                          </div>
+                          {addressSuggestions.map((address, index) => (
+                            <div
+                              key={index}
+                              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              onClick={() => {
+                                setEditingCustomer({ ...editingCustomer, billingAddress: address });
+                                setAddressSuggestions([]);
+                              }}
+                            >
+                              {address}
                             </div>
-                             {/* 2. First Name */}
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {addressError && (
+                      <p className="text-red-500 text-sm">{addressError}</p>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Billing Address</label>
+                      <input
+                        type="text"
+                        placeholder="Address will appear here after selection"
+                        value={editingCustomer.billingAddress}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, billingAddress: e.target.value })}
+                        className="w-full p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                      />
+                    </div>
+                  </div>
+                  {/* 2. First Name */}
                   <input
                     type="text"
                     placeholder="First Name"
@@ -1531,108 +1501,103 @@ const chartData = useMemo(() => {
                         ref={dropdownRef}
                         className="absolute z-10 mt-1 w-full bg-gray-100 border border-gray-600 text-sm text-gray-900 font-semibold rounded shadow-xl shadow-gray-700 max-h-60 overflow-auto"
                       >
-                        {[
-                          "Totally Tasty",
-                          "Cleaning and Janitorial Supplies",
-                          "Business Supplies",
-                          "Business Print",
-                          "Managed Print",
-                          "Mailroom Equipment",
-                          "Secure Shredding",
-                          "Workspace",
-                          "Office Plants & Plant Displays",
-                          "Workwear",
-                          "Defibrillators",
-                        ].map((service) => (
-                          <label key={service} className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="mr-2"
-                              checked={editingCustomer.services.current.includes(service)}
-                              onChange={() => {
-                                const isChecked = editingCustomer.services.current.includes(service);
-                                const updated = isChecked
-                                  ? editingCustomer.services.current.filter((s) => s !== service)
-                                  : [...editingCustomer.services.current, service];
-                                setEditingCustomer({
-                                  ...editingCustomer,
-                                  services: {
-                                    ...editingCustomer.services,
-                                    current: updated,
-                                  },
-                                });
-                              }}
-                            />
-                            {service}
-                          </label>
-                        ))}
+                        {availableServices.length > 0 ? (
+                          availableServices.map((service) => (
+                            <label
+                              key={service._id}
+                              className="flex items-center px-4 py-2 text-sm text-gray-800 hover:bg-gray-200 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                className="mr-2"
+                                checked={editingCustomer.services.current.includes(service.serviceName)}
+                                onChange={() => {
+                                  const isChecked = editingCustomer.services.current.includes(service.serviceName);
+                                  const updated = isChecked
+                                    ? editingCustomer.services.current.filter((s) => s !== service.serviceName)
+                                    : [...editingCustomer.services.current, service.serviceName];
+                                  setEditingCustomer({
+                                    ...editingCustomer,
+                                    services: {
+                                      ...editingCustomer.services,
+                                      current: updated,
+                                    },
+                                  });
+                                }}
+                              />
+                              {service.serviceName}
+                            </label>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">No services available</div>
+                        )}
                       </div>
                     )}
                   </div>
-                            
-                            <input
-                              type="text"
-                              placeholder="Past Services (comma separated)"
-                              value={editingCustomer.services.past.join(', ')}
-                              onChange={e =>
-                                setEditingCustomer({
-                                  ...editingCustomer,
-                                  services: {
-                                    ...editingCustomer.services,
-                                    past: e.target.value.split(',').map(s => s.trim()),
-                                  },
-                                })
-                              }
-                              className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
-                            />
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Document Upload</label>
-                              <input
-                                type="file"
-                                accept="application/pdf,image/*"
-                                onChange={e =>
-                                  setEditingCustomer({
-                                    ...editingCustomer,
-                                    document: e.target.files ? e.target.files[0] : editingCustomer.document,
-                                  })
-                                }
-                                className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded w-full"
-                              />
-                              {typeof editingCustomer.document === 'string' && (
-                                <div className="mt-2">
-                                  <p className="text-sm text-gray-600">Current document:</p>
-                                  <a 
-                                    href={`http://localhost:5000${editingCustomer.document}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 hover:underline"
-                                  >
-                                    View Current Document
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-3">
-                            <button
-                              onClick={() => {
-                                setShowEditForm(false);
-                                setEditingCustomer(null);
-                              }}
-                              className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleUpdateCustomer}
-                              className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-                            >
-                              Update Customer
-                            </button>
-                          </div>
-                        </div>
+
+                  <input
+                    type="text"
+                    placeholder="Past Services (comma separated)"
+                    value={editingCustomer.services.past.join(', ')}
+                    onChange={e =>
+                      setEditingCustomer({
+                        ...editingCustomer,
+                        services: {
+                          ...editingCustomer.services,
+                          past: e.target.value.split(',').map(s => s.trim()),
+                        },
+                      })
+                    }
+                    className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded"
+                  />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Document Upload</label>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={e =>
+                        setEditingCustomer({
+                          ...editingCustomer,
+                          document: e.target.files ? e.target.files[0] : editingCustomer.document,
+                        })
+                      }
+                      className="p-2 border border-black focus:outline-none font-semibold text-gray-800 rounded w-full"
+                    />
+                    {typeof editingCustomer.document === 'string' && (
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600">Current document:</p>
+                        <a
+                          href={`http://localhost:5000${editingCustomer.document}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          View Current Document
+                        </a>
                       </div>
-                     )}
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditingCustomer(null);
+                    }}
+                    className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpdateCustomer}
+                    className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Update Customer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
