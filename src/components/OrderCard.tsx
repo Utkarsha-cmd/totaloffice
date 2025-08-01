@@ -508,48 +508,54 @@ const handleDownloadInvoice = async () => {
 
         {/* Status Update Section */}
         {onStatusUpdate && (
-          <div className="mt-6 pt-4 border-t border-gray-200 space-y-4">
-            {/* Confirm Order */}
-            {order.status === 'pending' && (
-              <button
-                onClick={handleConfirmOrder}
-                className="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
-              >
-                Confirm Order
-              </button>
-            )}
+  <div className="mt-6 pt-4 border-t border-gray-200 space-y-4">
+    {/* Confirm Order */}
+    {order.status === 'pending' && (
+      <button
+        onClick={handleConfirmOrder}
+        className="px-4 py-2 text-sm bg-black text-white rounded hover:bg-gray-800 transition-colors"
+      >
+        Confirm Order
+      </button>
+    )}
 
-            {/* Mark as Shipped */}
-            {order.status === 'processing' && (
-              <button
-                onClick={handleMarkAsShipped}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                Mark as Shipped
-              </button>
-            )}
+    {/* Mark as Shipped */}
+    {order.status === 'processing' && (
+      <button
+        onClick={handleMarkAsShipped}
+        className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      >
+        Mark as Shipped
+      </button>
+    )}
 
-            {/* Mark as Delivered */}
-            {order.status === 'shipped' && (
-              <button
-                onClick={handleMarkAsDelivered}
-                className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-              >
-                Mark as Delivered
-              </button>
-            )}
+    {/* Mark as Delivered */}
+    {order.status === 'shipped' && (
+      <button
+        onClick={handleMarkAsDelivered}
+        className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+      >
+        Mark as Delivered
+      </button>
+    )}
 
-            {/* Download Invoice */}
-            <div>
-              <button
-                onClick={handleDownloadInvoice}
-                className="bg-gray-100 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Download Invoice
-              </button>
-            </div>
-          </div>
-        )}
+    {/* Invoice Buttons in a single flex row */}
+    <div className="flex items-center justify-between gap-4">
+      <button
+        onClick={handleDownloadInvoice}
+        className="bg-gray-100 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+      >
+        Download Invoice
+      </button>
+      <button
+        onClick={handleDownloadInvoice}
+        className="bg-gray-100 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors ml-auto"
+      >
+        Send invoice to mail
+      </button>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
