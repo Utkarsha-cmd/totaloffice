@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { LayoutDashboard, Users, Clock, Menu, X, History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -998,14 +999,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                                           )}
                                         </ul>
                                         <div className="mt-2">
-                                          <a
-                                            href={`/customer-history/${customer._id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                          <Link
+                                            to={`/customer-history/${customer._id}`}
                                             className="text-sm text-blue-600 hover:underline"
                                           >
                                             View Full History
-                                          </a>
+                                          </Link>
                                         </div>
                                       </div>
                                     </div>
@@ -1083,12 +1082,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                                           )}
                                         </ul>
                                         <div className="mt-2">
-                                          <a
-                                            href={`/customer-history/${customer._id}`}
+                                          <Link
+                                            to={`/customer-history/${customer._id}`}
                                             className="text-sm text-blue-600 hover:underline"
                                           >
                                             View Full History
-                                          </a>
+                                          </Link>
                                         </div>
                                       </div>
                                     </div>

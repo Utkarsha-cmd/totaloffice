@@ -86,19 +86,36 @@ const mapBackendOrderToFrontend = (backendOrder: any): Order => {
     shipping: 0, // Not provided by backend
     total: backendOrder.totalAmount,
     status: backendOrder.status,
-    shippingAddress: typeof backendOrder.shippingAddress === 'string' ? {
-      street: backendOrder.shippingAddress,
-      city: '',
-      state: '',
-      postalCode: '',
-      country: '',
-      firstName: backendOrder.customerName?.split(' ')[0] || '',
-      lastName: backendOrder.customerName?.split(' ').slice(1).join(' ') || ''
-    } : {
-      ...backendOrder.shippingAddress,
-      state: backendOrder.shippingAddress.state || '',
-      phone: backendOrder.shippingAddress.phone || ''
-    },
+    shippingAddress: (() => {
+      const defaultAddress = {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        firstName: backendOrder.customerName?.split(' ')[0] || '',
+        lastName: backendOrder.customerName?.split(' ').slice(1).join(' ') || '',
+        phone: ''
+      };
+      
+      if (!backendOrder.shippingAddress) {
+        return defaultAddress;
+      }
+      
+      if (typeof backendOrder.shippingAddress === 'string') {
+        return {
+          ...defaultAddress,
+          street: backendOrder.shippingAddress
+        };
+      }
+      
+      return {
+        ...defaultAddress,
+        ...backendOrder.shippingAddress,
+        state: backendOrder.shippingAddress?.state || '',
+        phone: backendOrder.shippingAddress?.phone || ''
+      };
+    })(),
     billingAddress: (backendOrder.billingAddress && typeof backendOrder.billingAddress === 'object') 
       ? { ...backendOrder.billingAddress }
       : (backendOrder.shippingAddress ? {

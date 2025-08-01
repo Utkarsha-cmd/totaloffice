@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,7 +12,8 @@ import RegisterPage from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import CustomerDetails from "./components/CustomerDetails";
-import WarehouseDashboard from "./components/warehouse";  
+import WarehouseDashboard from "./components/warehouse";
+import CustomerHistoryPage from "./pages/CustomerHistoryPage";
 
 
 const queryClient = new QueryClient();
@@ -196,6 +198,16 @@ const App = () => {
               <ProtectedRoute>
                 {userRole === 'customer' ? (
                   <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customer-history/:customerId" element={
+              <ProtectedRoute>
+                {userRole === 'admin' || userRole === 'staff' ? (
+                  <CustomerHistoryPage />
                 ) : (
                   <Navigate to="/login" replace />
                 )}
