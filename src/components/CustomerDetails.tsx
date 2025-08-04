@@ -3,13 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus, Building2, Search, Filter } from 'lucide-react';
+import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus, Building2, Search, Filter, Ticket, Plus, Clock, CheckCircle, XCircle, AlertTriangle, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 import { authService } from '@/services/authService';
-import { DeliveryCalendar, type Delivery } from "../components/DeliveryCalendar";
-import { OrdersTab } from "../components/OrderTab.tsx";
+import { DeliveryCalendar, type Delivery } from "./DeliveryCalendar";
+import { OrdersTab } from "./OrderTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 // Mock data for deliveries
 const deliveriesMock: Delivery[] = [
@@ -88,6 +90,23 @@ interface UserProfile {
   createdAt?: Date;
 }
 
+interface SupportTicket {
+  _id?: string;
+  ticketId: string;
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  title: string;
+  description: string;
+  category: 'hardware' | 'software' | 'maintenance' | 'setup' | 'other';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  assignedTo?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  attachments?: string[];
+}
+
 const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   username,
   userType,
@@ -100,7 +119,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
-  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders' | 'support'>('profile');
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
     email: '',
@@ -116,6 +135,20 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [deliveries] = useState<Delivery[]>(deliveriesMock);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  // Support ticket states
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    title: '',
+    description: '',
+    category: 'hardware' as SupportTicket['category'],
+    priority: 'medium' as SupportTicket['priority'],
+  });
+  const [ticketSearchTerm, setTicketSearchTerm] = useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
+  const [ticketAttachments, setTicketAttachments] = useState<File[]>([]);
+
   const filteredDeliveries = deliveries.filter((delivery) => {
     const matchesSearch =
       delivery.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,6 +175,18 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     billingAddress: customerInfo.billingAddress || ''
   });
   const [document, setDocument] = useState<File | undefined>(undefined);
+
+  // Filter support tickets
+  const filteredTickets = supportTickets.filter((ticket) => {
+    const matchesSearch =
+      ticket.ticketId.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+      ticket.title.toLowerCase().includes(ticketSearchTerm.toLowerCase()) ||
+      ticket.description.toLowerCase().includes(ticketSearchTerm.toLowerCase());
+
+    const matchesStatus = ticketStatusFilter === "all" || ticket.status === ticketStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   // Fetch current authenticated user and their profile
   useEffect(() => {
@@ -227,6 +272,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     fetchUserData();
   }, []);
 
+  // Fetch support tickets when user is loaded
+  useEffect(() => {
+    if (currentUser) {
+      fetchSupportTickets();
+    }
+  }, [currentUser]);
+
   // Update editedInfo when customerInfo changes
   useEffect(() => {
     setEditedInfo(prev => ({
@@ -238,6 +290,140 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       }
     }));
   }, [customerInfo]);
+
+  const fetchSupportTickets = async () => {
+    if (!currentUser) return;
+
+    try {
+      const response = await axios.get(`http://localhost:5000/api/support-tickets?customerId=${currentUser.id}`, {
+        headers: {
+          Authorization: `Bearer ${currentUser.token}`
+        }
+      });
+      setSupportTickets(response.data || []);
+    } catch (err: any) {
+      console.error('Error fetching support tickets:', err);
+      // Don't show error toast for this, as it might be a new endpoint
+    }
+  };
+
+  const handleCreateTicket = async () => {
+    if (!currentUser) {
+      toast({
+        title: 'Authentication Error',
+        description: 'You must be logged in to create a support ticket.',
+        duration: 3000,
+        className: 'bg-gray-100 border border-gray-200 text-gray-800',
+      });
+      return;
+    }
+
+    if (!ticketForm.title.trim() || !ticketForm.description.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in both title and description.',
+        duration: 3000,
+        className: 'bg-gray-100 border border-gray-200 text-gray-800',
+      });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('customerId', currentUser.id);
+      formData.append('customerName', customerInfo.name);
+      formData.append('customerEmail', customerInfo.email);
+      formData.append('title', ticketForm.title);
+      formData.append('description', ticketForm.description);
+      formData.append('category', ticketForm.category);
+      formData.append('priority', ticketForm.priority);
+
+      // Add attachments if any
+      ticketAttachments.forEach((file, index) => {
+        formData.append('attachments', file);
+      });
+
+      const response = await axios.post('http://localhost:5000/api/support-tickets', formData, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Add the new ticket to the local state
+      setSupportTickets(prev => [response.data, ...prev]);
+
+      // Reset form
+      setTicketForm({
+        title: '',
+        description: '',
+        category: 'hardware',
+        priority: 'medium',
+      });
+      setTicketAttachments([]);
+      setIsCreatingTicket(false);
+
+      toast({
+        title: 'Success',
+        description: `Support ticket ${response.data.ticketId} created successfully!`,
+        duration: 3000,
+        className: 'bg-green-50 border-green-100 text-green-700',
+      });
+    } catch (err: any) {
+      console.error('Error creating support ticket:', err);
+      toast({
+        title: 'Error',
+        description: err.response?.data?.message || 'Failed to create support ticket. Please try again.',
+        duration: 3000,
+        className: 'bg-red-50 border-red-100 text-red-700',
+      });
+    }
+  };
+
+  const getStatusBadgeVariant = (status: SupportTicket['status']) => {
+    switch (status) {
+      case 'open':
+        return 'default';
+      case 'in-progress':
+        return 'secondary';
+      case 'resolved':
+        return 'outline';
+      case 'closed':
+        return 'destructive';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPriorityBadgeVariant = (priority: SupportTicket['priority']) => {
+    switch (priority) {
+      case 'low':
+        return 'outline';
+      case 'medium':
+        return 'secondary';
+      case 'high':
+        return 'default';
+      case 'urgent':
+        return 'destructive';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusIcon = (status: SupportTicket['status']) => {
+    switch (status) {
+      case 'open':
+        return <AlertCircle className="w-4 h-4" />;
+      case 'in-progress':
+        return <Clock className="w-4 h-4" />;
+      case 'resolved':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'closed':
+        return <XCircle className="w-4 h-4" />;
+      default:
+        return <AlertCircle className="w-4 h-4" />;
+    }
+  };
 
   const handleEdit = () => {
     // Verify the user is editing their own profile
@@ -466,6 +652,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     }
   };
 
+  const handleTicketAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const fileArray = Array.from(e.target.files);
+      setTicketAttachments(fileArray);
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 bg-gray-50">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
@@ -500,12 +693,278 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             >
               Deliveries
             </button>
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'support'
+                  ? 'bg-green-100 text-green-800'
+                  : 'text-gray-600 hover:bg-gray-100'
+                }`}
+            >
+              <Ticket className="w-4 h-4 inline mr-2" />
+              Support Tickets
+            </button>
           </nav>
         </aside>
 
         {/* Main Content */}
         <main className="space-y-6">
-          {activeTab === 'orders' ? (
+          {activeTab === 'support' ? (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-gray-700">Support Tickets</h1>
+                <Button
+                  onClick={() => setIsCreatingTicket(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Ticket
+                </Button>
+              </div>
+
+              {/* Create Ticket Modal/Form */}
+              {isCreatingTicket && (
+                <Card className="bg-white border border-green-100 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+                      <Plus className="w-5 h-5 text-green-500" />
+                      Create New Support Ticket
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Title */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="ticketTitle" className="text-gray-700">Issue Title *</Label>
+                        <Input
+                          id="ticketTitle"
+                          value={ticketForm.title}
+                          onChange={(e) => setTicketForm(prev => ({ ...prev, title: e.target.value }))}
+                          className="bg-white border-green-100 focus:border-green-200 text-gray-700"
+                        />
+                      </div>
+
+                      {/* Category */}
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Category</Label>
+                        <Select
+                          value={ticketForm.category}
+                          onValueChange={(value: SupportTicket['category']) => 
+                            setTicketForm(prev => ({ ...prev, category: value }))
+                          }
+                        >
+                          <SelectTrigger className="bg-white border-green-100 text-gray-700">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hardware" className=" bg-white text-gray-700">Hardware Issue</SelectItem>
+                            <SelectItem value="software" className="bg-white text-gray-700">Software Issue</SelectItem>
+                            <SelectItem value="maintenance" className="bg-white text-gray-700">Maintenance Request</SelectItem>
+                            <SelectItem value="setup" className="bg-white text-gray-700">Setup/Installation</SelectItem>
+                            <SelectItem value="other" className="bg-white text-gray-700">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Priority */}
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Priority</Label>
+                        <Select
+                          value={ticketForm.priority}
+                          onValueChange={(value: SupportTicket['priority']) => 
+                            setTicketForm(prev => ({ ...prev, priority: value }))
+                          }
+                        >
+                          <SelectTrigger className="bg-white border-green-100 text-gray-700">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low" className="bg-white text-gray-700">Low</SelectItem>
+                            <SelectItem value="medium" className="bg-white text-gray-700">Medium</SelectItem>
+                            <SelectItem value="high" className="bg-white text-gray-700">High</SelectItem>
+                            <SelectItem value="urgent" className="bg-white text-gray-700">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="ticketDescription" className="text-gray-700">Description *</Label>
+                        <Textarea
+                          id="ticketDescription"
+                          value={ticketForm.description}
+                          onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
+                          className="bg-white border-green-100 focus:border-green-200 min-h-[120px] text-gray-700"
+                        />
+                      </div>
+
+                      {/* Attachments */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="ticketAttachments" className="text-gray-700">Attachments</Label>
+                        <Input
+                          id="ticketAttachments"
+                          type="file"
+                          multiple
+                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                          onChange={handleTicketAttachmentChange}
+                          className="bg-white border-green-100 text-gray-700"
+                        />
+                        {ticketAttachments.length > 0 && (
+                          <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
+                            {ticketAttachments.map((file, index) => (
+                              <li key={index}>{file.name}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        onClick={handleCreateTicket}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Ticket className="w-4 h-4 mr-2" />
+                        Create Ticket
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setIsCreatingTicket(false);
+                          setTicketForm({
+                            title: '',
+                            description: '',
+                            category: 'hardware',
+                            priority: 'medium',
+                          });
+                          setTicketAttachments([]);
+                        }}
+                        variant="outline"
+                        className="border-gray-200 text-gray-500"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Search and Filter */}
+              <Card className="bg-white border border-gray-100 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 w-4 h-4" />
+                        <Input
+                          value={ticketSearchTerm}
+                          onChange={(e) => setTicketSearchTerm(e.target.value)}
+                          className="pl-10 bg-white text-gray-700 border-gray-700"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Select 
+                        value={ticketStatusFilter}
+                        onValueChange={setTicketStatusFilter}
+                      >
+                        <SelectTrigger className=" bg-white border-gray-200 text-gray-700">
+                          <Filter className="w-4 h-4 mr-2" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="bg-white text-gray-700">All Status</SelectItem>
+                          <SelectItem value="open" className="bg-white text-gray-700">Open</SelectItem>
+                          <SelectItem value="in-progress" className="bg-white text-gray-700">In Progress</SelectItem>
+                          <SelectItem value="resolved" className="bg-white text-gray-700">Resolved</SelectItem>
+                          <SelectItem value="closed" className="bg-white text-gray-700">Closed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tickets List */}
+              <div className="space-y-4">
+                {filteredTickets.length === 0 ? (
+                  <Card className="bg-white border border-gray-100 shadow-sm">
+                    <CardContent className="p-8 text-center">
+                      <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-500 mb-2">No Support Tickets</h3>
+                      <p className="text-gray-400 mb-4">
+                        {ticketSearchTerm || ticketStatusFilter !== 'all' 
+                          ? 'No tickets match your search criteria.'
+                          : 'You haven\'t created any support tickets yet.'
+                        }
+                      </p>
+                      {!ticketSearchTerm && ticketStatusFilter === 'all' && (
+                        <Button
+                          onClick={() => setIsCreatingTicket(true)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Your First Ticket
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredTickets.map((ticket) => (
+                    <Card key={ticket._id || ticket.ticketId} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-lg font-semibold text-gray-800">{ticket.title}</h3>
+                              <Badge variant="outline" className="text-xs">
+                                {ticket.ticketId}
+                              </Badge>
+                            </div>
+                            <p className="text-gray-600 mb-3 line-clamp-2">{ticket.description}</p>
+                            <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Building2 className="w-3 h-3" />
+                                {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(ticket.createdAt).toLocaleDateString()}
+                              </span>
+                              {ticket.assignedTo && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  Assigned to: {ticket.assignedTo}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 ml-4">
+                            <div className="flex items-center gap-1">
+                              {getStatusIcon(ticket.status)}
+                              <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                                {ticket.status.replace('-', ' ').toUpperCase()}
+                              </Badge>
+                            </div>
+                            <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
+                              {ticket.priority.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {ticket.attachments && ticket.attachments.length > 0 && (
+                          <div className="text-gray-800 file:text-gray-800 file:border-0 file:mr-4 file:py-1.5 file:px-3 file:bg-gray-100 file:rounded-md">
+                            <FilePlus className="w-3 h-3 text-gray-800" />
+                            {ticket.attachments.length} attachment(s)
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : activeTab === 'orders' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
               <OrdersTab customerInfo={customerInfo} />
@@ -687,7 +1146,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   {isEditing ? (
                     <div className="space-y-2">
                       <Label htmlFor="billingAddress" className="text-black">Billing Address</Label>
-                      <textarea
+                      <Textarea
                         id="billingAddress"
                         value={userProfile?.billingAddress || ''}
                         onChange={(e) => updateBillingAddress(e.target.value)}
@@ -749,11 +1208,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* Header */}
               <h2 className="text-2xl font-semibold text-gray-700">Delivery Calendar</h2>
               <DeliveryCalendar deliveries={deliveriesMock} />
-            </div>
-          ) : activeTab === 'orders' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
-              <OrdersTab customerInfo={customerInfo} />
             </div>
           ) : null}
         </main>
