@@ -14,37 +14,10 @@ import StaffDashboard from "./pages/StaffDashboard";
 import CustomerDetails from "./components/CustomerDetails";
 import WarehouseDashboard from "./components/warehouse";
 import CustomerHistoryPage from "./pages/CustomerHistoryPage";
-
+import TechnicianDashboard from "./components/TechnicianDasboard";
 
 const queryClient = new QueryClient();
 
-// Dummy data for staff dashboard
-const dummyCustomers = [
-  {
-    name: "Alice Johnson",
-    company: "GreenTech Ltd.",
-    duration: "12 months",
-    services: {
-      current: ["Web Hosting", "Email Services"],
-      past: ["Domain Registration"],
-    },
-    contact: "alice.johnson@greentech.com",
-    billingAddress: "1234 Elm Street, Springfield",
-    paymentInfo: "Visa **** 4242",
-  },
-  {
-    name: "Bob Smith",
-    company: "BlueOcean Corp.",
-    duration: "6 months",
-    services: {
-      current: ["Cloud Storage"],
-      past: ["Data Migration"],
-    },
-    contact: "bob.smith@blueocean.com",
-    billingAddress: "5678 Oak Avenue, Metropolis",
-    paymentInfo: "Mastercard **** 5678",
-  },
-];
 
 const App = () => {
   // Initialize state from localStorage if available
@@ -120,7 +93,13 @@ const App = () => {
       case "customer":
         return <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />;
       case "technician":
-        return <div className="p-6 text-xl font-medium text-green-700">Technician dashboard coming soon...</div>;
+         return (
+    <TechnicianDashboard
+      username={username}
+      userType={userRole}
+      onLogout={handleLogout}
+    />
+  );
       case "warehouse_staff":
         return (
           <WarehouseDashboard
@@ -217,6 +196,19 @@ const App = () => {
   <ProtectedRoute>
     {userRole === 'warehouse_staff' ? (
       <WarehouseDashboard
+        username={username}
+        userType={userRole}
+        onLogout={handleLogout}
+      />
+    ) : (
+      <Navigate to="/login" replace />
+    )}
+  </ProtectedRoute>
+} />
+<Route path="/technician" element={
+  <ProtectedRoute>
+    {userRole === 'technician' ? (
+      <TechnicianDashboard
         username={username}
         userType={userRole}
         onLogout={handleLogout}

@@ -767,7 +767,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       </div>
 
                       {/* Priority */}
-                      <div className="space-y-2">
+                      {/* <div className="space-y-2">
                         <Label className="text-gray-700">Priority</Label>
                         <Select
                           value={ticketForm.priority}
@@ -785,7 +785,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                             <SelectItem value="urgent" className="bg-white text-gray-700">Urgent</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
+                      </div> */}
 
                       {/* Description */}
                       <div className="space-y-2 md:col-span-2">
@@ -1208,6 +1208,10 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* Header */}
               <h2 className="text-2xl font-semibold text-gray-700">Delivery Calendar</h2>
               <DeliveryCalendar deliveries={deliveriesMock} />
+            </div> ) : activeTab === 'orders' ? (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
+              <OrdersTab customerInfo={customerInfo} />
             </div>
           ) : null}
         </main>

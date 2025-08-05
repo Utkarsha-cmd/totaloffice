@@ -46,12 +46,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       setIsLoading(true);
       const toastId = toast.loading('Signing in...');
       let response: LoginResponse;
-      if (useremail.includes('warehouse')) {
-        response = { role: 'warehouse_staff' };
+      if (useremail === 'technician@mail.com') {
+       response = { role: 'technician' };
+      } else if (useremail.includes('warehouse')) {
+       response = { role: 'warehouse_staff' };
       } else {
-        response = await login(useremail, password);
-      }
-
+       response = await login(useremail, password);
+  }
       console.log('Login response:', response);
 
       if (!response) {

@@ -7,6 +7,7 @@ import { Order } from '../hooks/order';
 import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
 import ServicesAndStocks from '@/components/ServiceandStock';
+import TicketAssignment from '@/components/TicketAssignment';
 
 interface AdminDashboardProps {
   username: string;
@@ -42,7 +43,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'orders' | "services">("details");
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'orders' | 'services' |"tickets">("details");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showHistory, setShowHistory] = useState<{ [key: string]: boolean }>({});
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
@@ -345,6 +346,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
     { name: 'User Details', icon: Users, tab: 'details', current: activeTab === 'details' },
     { name: 'Orders', tab: 'orders', icon: Package, current: activeTab === 'orders' },
     { name: 'Services and Stocks', tab: 'services', icon: Truck, current: activeTab === 'services' },
+    { name: 'Support Tickets', icon: History, tab: 'tickets', current: activeTab === 'tickets' },
   ];
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -862,6 +864,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
               <ServicesAndStocks
               />
             )
+            : activeTab === 'tickets' ? (
+               <TicketAssignment /> 
+              ) 
               : (
                 <>
                   {/* Search bar for non-dashboard tabs */}

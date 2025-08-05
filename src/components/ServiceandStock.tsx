@@ -191,7 +191,7 @@ const ServicesAndStocks = () => {
     <>
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Services and Stocks</h2>
+          {/* <h2 className="text-xl font-semibold text-gray-800">Services and Stocks</h2> */}
           <button
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
             onClick={() => {
