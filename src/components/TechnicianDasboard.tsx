@@ -25,11 +25,19 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({ username, use
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Technician Dashboard</h1>
-              <p className="text-gray-600">Welcome back, Sarah Johnson</p>
+              <p className="text-gray-600">Welcome back, {username}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-gray-500" />
-              <span className="text-gray-700">Technician</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-gray-500" />
+                <span className="text-gray-700">Technician</span>
+              </div>
+              <button 
+                onClick={onLogout}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>

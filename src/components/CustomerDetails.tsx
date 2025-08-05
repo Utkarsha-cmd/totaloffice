@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus, Building2, Search, Filter, Ticket, Plus, Clock, CheckCircle, XCircle, AlertTriangle, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 import { authService } from '@/services/authService';
+import { supportTicketApi } from '@/services/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { DeliveryCalendar, type Delivery } from "./DeliveryCalendar";
 import { OrdersTab } from "./OrderTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -98,13 +100,13 @@ interface SupportTicket {
   customerEmail: string;
   title: string;
   description: string;
-  category: 'hardware' | 'software' | 'maintenance' | 'setup' | 'other';
+  category: 'billing' | 'technical' | 'account' | 'service' | 'other';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   assignedTo?: string;
   createdAt: Date;
   updatedAt: Date;
-  attachments?: string[];
+  attachments?: Array<{ url: string; name: string; type: string }>;
 }
 
 const CustomerDetails: React.FC<CustomerDetailsProps> = ({
@@ -135,19 +137,105 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [deliveries] = useState<Delivery[]>(deliveriesMock);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  
+
   // Support ticket states
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [ticketForm, setTicketForm] = useState({
     title: '',
     description: '',
-    category: 'hardware' as SupportTicket['category'],
-    priority: 'medium' as SupportTicket['priority'],
+    category: 'technical',
+    priority: 'medium',
   });
   const [ticketSearchTerm, setTicketSearchTerm] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
   const [ticketAttachments, setTicketAttachments] = useState<File[]>([]);
+
+  // Handle ticket form input changes
+  const handleTicketInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setTicketForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle ticket form submission is now defined below with more comprehensive error handling
+
+  // Handle file attachment
+  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setTicketAttachments(prev => [...prev, ...files]);
+    }
+  };
+
+  // Remove an attachment
+  const removeAttachment = (index: number) => {
+    setTicketAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Fetch support tickets for the current user
+  const fetchUserTickets = async () => {
+    try {
+      setLoading(true);
+      
+      // Debug: Log authentication state
+      const userStr = localStorage.getItem('user');
+      console.log('Current user from localStorage:', userStr);
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          console.log('Parsed user data:', {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            hasToken: !!user.token,
+            tokenPrefix: user.token ? user.token.substring(0, 10) + '...' : 'No token'
+          });
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      } else {
+        console.warn('No user data found in localStorage');
+      }
+      
+      const tickets = await supportTicketApi.getMyTickets();
+      setSupportTickets(tickets);
+    } catch (error) {
+      console.error('Error fetching support tickets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load support tickets",
+        variant: "destructive"
+      });
+      
+      // If 403, suggest re-login
+      if (error.response?.status === 403) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+          action: (
+            <Button variant="ghost" onClick={onLogout}>
+              Log In Again
+            </Button>
+          )
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load support tickets when the support tab is active
+  useEffect(() => {
+    if (activeTab === 'support') {
+      fetchUserTickets();
+    }
+  }, [activeTab]);
 
   const filteredDeliveries = deliveries.filter((delivery) => {
     const matchesSearch =
@@ -295,15 +383,15 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     if (!currentUser) return;
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/support-tickets?customerId=${currentUser.id}`, {
-        headers: {
-          Authorization: `Bearer ${currentUser.token}`
-        }
-      });
-      setSupportTickets(response.data || []);
+      const tickets = await supportTicketApi.getMyTickets();
+      setSupportTickets(tickets);
     } catch (err: any) {
       console.error('Error fetching support tickets:', err);
-      // Don't show error toast for this, as it might be a new endpoint
+      toast({
+        title: "Error",
+        description: "Failed to load support tickets",
+        variant: "destructive"
+      });
     }
   };
 
@@ -329,35 +417,28 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     }
 
     try {
-      const formData = new FormData();
-      formData.append('customerId', currentUser.id);
-      formData.append('customerName', customerInfo.name);
-      formData.append('customerEmail', customerInfo.email);
-      formData.append('title', ticketForm.title);
-      formData.append('description', ticketForm.description);
-      formData.append('category', ticketForm.category);
-      formData.append('priority', ticketForm.priority);
+      const ticketData = {
+        title: ticketForm.title,
+        description: ticketForm.description,
+        category: ticketForm.category as SupportTicket['category'],
+        priority: ticketForm.priority as SupportTicket['priority'],
+        attachments: ticketAttachments.map(file => ({
+          name: file.name,
+          type: file.type,
+          url: URL.createObjectURL(file)
+        }))
+      };
 
-      // Add attachments if any
-      ticketAttachments.forEach((file, index) => {
-        formData.append('attachments', file);
-      });
-
-      const response = await axios.post('http://localhost:5000/api/support-tickets', formData, {
-        headers: {
-          'Authorization': `Bearer ${currentUser.token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const newTicket = await supportTicketApi.createTicket(ticketData);
 
       // Add the new ticket to the local state
-      setSupportTickets(prev => [response.data, ...prev]);
+      setSupportTickets(prev => [newTicket, ...prev]);
 
       // Reset form
       setTicketForm({
         title: '',
         description: '',
-        category: 'hardware',
+        category: 'technical',
         priority: 'medium',
       });
       setTicketAttachments([]);
@@ -365,7 +446,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
 
       toast({
         title: 'Success',
-        description: `Support ticket ${response.data.ticketId} created successfully!`,
+        description: `Support ticket ${newTicket.ticketId} created successfully!`,
         duration: 3000,
         className: 'bg-green-50 border-green-100 text-green-700',
       });
@@ -669,8 +750,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <button
               onClick={() => setActiveTab('profile')}
               className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'profile'
-                  ? 'bg-green-100 text-green-800'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-green-100 text-green-800'
+                : 'text-gray-600 hover:bg-gray-100'
                 }`}
             >
               Profile
@@ -678,8 +759,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <button
               onClick={() => setActiveTab('orders')}
               className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'orders'
-                  ? 'bg-green-100 text-green-800'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-green-100 text-green-800'
+                : 'text-gray-600 hover:bg-gray-100'
                 }`}
             >
               Place Order
@@ -687,8 +768,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <button
               onClick={() => setActiveTab('deliveries')}
               className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'deliveries'
-                  ? 'bg-green-100 text-green-800'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-green-100 text-green-800'
+                : 'text-gray-600 hover:bg-gray-100'
                 }`}
             >
               Deliveries
@@ -696,8 +777,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <button
               onClick={() => setActiveTab('support')}
               className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'support'
-                  ? 'bg-green-100 text-green-800'
-                  : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-green-100 text-green-800'
+                : 'text-gray-600 hover:bg-gray-100'
                 }`}
             >
               <Ticket className="w-4 h-4 inline mr-2" />
@@ -749,7 +830,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                         <Label className="text-gray-700">Category</Label>
                         <Select
                           value={ticketForm.category}
-                          onValueChange={(value: SupportTicket['category']) => 
+                          onValueChange={(value: SupportTicket['category']) =>
                             setTicketForm(prev => ({ ...prev, category: value }))
                           }
                         >
@@ -757,35 +838,17 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="hardware" className=" bg-white text-gray-700">Hardware Issue</SelectItem>
-                            <SelectItem value="software" className="bg-white text-gray-700">Software Issue</SelectItem>
-                            <SelectItem value="maintenance" className="bg-white text-gray-700">Maintenance Request</SelectItem>
-                            <SelectItem value="setup" className="bg-white text-gray-700">Setup/Installation</SelectItem>
+                            <SelectItem value="technical" className="bg-white text-gray-700">Technical Issue</SelectItem>
+                            <SelectItem value="billing" className="bg-white text-gray-700">Billing Question</SelectItem>
+                            <SelectItem value="account" className="bg-white text-gray-700">Account Help</SelectItem>
+                            <SelectItem value="service" className="bg-white text-gray-700">Service Request</SelectItem>
                             <SelectItem value="other" className="bg-white text-gray-700">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Priority */}
-                      {/* <div className="space-y-2">
-                        <Label className="text-gray-700">Priority</Label>
-                        <Select
-                          value={ticketForm.priority}
-                          onValueChange={(value: SupportTicket['priority']) => 
-                            setTicketForm(prev => ({ ...prev, priority: value }))
-                          }
-                        >
-                          <SelectTrigger className="bg-white border-green-100 text-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low" className="bg-white text-gray-700">Low</SelectItem>
-                            <SelectItem value="medium" className="bg-white text-gray-700">Medium</SelectItem>
-                            <SelectItem value="high" className="bg-white text-gray-700">High</SelectItem>
-                            <SelectItem value="urgent" className="bg-white text-gray-700">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div> */}
+                      {/* Priority - Hidden but set to medium by default */}
+                      <input type="hidden" value="medium" />
 
                       {/* Description */}
                       <div className="space-y-2 md:col-span-2">
@@ -834,7 +897,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           setTicketForm({
                             title: '',
                             description: '',
-                            category: 'hardware',
+                            category: 'technical',
                             priority: 'medium',
                           });
                           setTicketAttachments([]);
@@ -864,7 +927,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Select 
+                      <Select
                         value={ticketStatusFilter}
                         onValueChange={setTicketStatusFilter}
                       >
@@ -893,7 +956,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-500 mb-2">No Support Tickets</h3>
                       <p className="text-gray-400 mb-4">
-                        {ticketSearchTerm || ticketStatusFilter !== 'all' 
+                        {ticketSearchTerm || ticketStatusFilter !== 'all'
                           ? 'No tickets match your search criteria.'
                           : 'You haven\'t created any support tickets yet.'
                         }
@@ -917,7 +980,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="text-lg font-semibold text-gray-800">{ticket.title}</h3>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs text-black">
                                 {ticket.ticketId}
                               </Badge>
                             </div>
@@ -939,19 +1002,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2 ml-4">
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(ticket.status)}
-                              <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                                {ticket.status.replace('-', ' ').toUpperCase()}
-                              </Badge>
-                            </div>
-                            <Badge variant={getPriorityBadgeVariant(ticket.priority)}>
-                              {ticket.priority.toUpperCase()}
+                          <div className="flex items-center gap-1 ml-4">
+                            {getStatusIcon(ticket.status)}
+                            <Badge variant={getStatusBadgeVariant(ticket.status)} className="text-black">
+                              {ticket.status.replace('-', ' ').toUpperCase()}
                             </Badge>
                           </div>
                         </div>
-                        
+
                         {ticket.attachments && ticket.attachments.length > 0 && (
                           <div className="text-gray-800 file:text-gray-800 file:border-0 file:mr-4 file:py-1.5 file:px-3 file:bg-gray-100 file:rounded-md">
                             <FilePlus className="w-3 h-3 text-gray-800" />
@@ -1208,10 +1266,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* Header */}
               <h2 className="text-2xl font-semibold text-gray-700">Delivery Calendar</h2>
               <DeliveryCalendar deliveries={deliveriesMock} />
-            </div> ) : activeTab === 'orders' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
-              <OrdersTab customerInfo={customerInfo} />
             </div>
           ) : null}
         </main>

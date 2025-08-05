@@ -45,28 +45,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     try {
       setIsLoading(true);
       const toastId = toast.loading('Signing in...');
+      
+      // Always try to authenticate with the backend first
       let response: LoginResponse;
-      if (useremail === 'technician@mail.com') {
-       response = { role: 'technician' };
-      } else if (useremail.includes('warehouse')) {
-       response = { role: 'warehouse_staff' };
-      } else {
-       response = await login(useremail, password);
-  }
-      console.log('Login response:', response);
+      try {
+        response = await login(useremail, password);
+        console.log('Login response:', response);
 
-      if (!response) {
-        throw new Error('No response from server');
+        if (!response) {
+          throw new Error('No response from server');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        // If login fails, check if it's a technician trying to log in
+        if (selectedUserType === 'technician') {
+          throw new Error('Invalid technician credentials. Please try again.');
+        }
+        throw error; // Re-throw the error if not a technician
       }
 
       const roleFromResponse = response.role?.toLowerCase();
       const allowedRoles = ['customer', 'admin', 'staff', 'technician', 'warehouse_staff'] as const;
       type AllowedRole = typeof allowedRoles[number];
 
+      // For technician login, ensure the role is set to 'technician' if the backend confirms it
       const userRole: AllowedRole =
-        allowedRoles.includes(roleFromResponse as AllowedRole)
-          ? (roleFromResponse as AllowedRole)
-          : selectedUserType;
+        roleFromResponse === 'technician' 
+          ? 'technician' 
+          : allowedRoles.includes(roleFromResponse as AllowedRole)
+            ? (roleFromResponse as AllowedRole)
+            : selectedUserType;
 
       console.log('Determined user role:', userRole);
 

@@ -149,6 +149,35 @@ const getUserByEmail = async (email: string) => {
   }
 };
 
+// Get all users with technician role
+const getTechnicians = async (): Promise<Array<{ _id: string; name: string }>> => {
+  try {
+    // Try to fetch technicians from the API
+    const response = await axios.get(`${API_URL}/technicians`, { 
+      headers: getAuthHeader() 
+    });
+    
+    // Transform the data to match the expected format
+    if (Array.isArray(response.data)) {
+      return response.data.map((user: any) => ({
+        _id: user._id,
+        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+      }));
+    }
+    
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Error fetching technicians from API, using fallback data:', error);
+    
+    // Fallback to mock data if API call fails
+    return [
+      { _id: '1', name: 'John Doe' },
+      { _id: '2', name: 'Jane Smith' },
+      { _id: '3', name: 'Mike Johnson' }
+    ];
+  }
+};
+
 // Export CSV
 const exportUsersCSV = async () => {
   try {
@@ -173,10 +202,9 @@ const exportUsersCSV = async () => {
   }
 };
 
-
-
 export const userService = {
   getUsers,
+  getTechnicians,
   getUserById,
   getUserByEmail,
   createUser,

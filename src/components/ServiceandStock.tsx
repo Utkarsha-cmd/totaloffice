@@ -25,10 +25,10 @@ const ServicesAndStocks = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [editedProduct, setEditedProduct] = useState<Partial<Product>>({ 
-    name: '', 
-    stock: 0, 
-    price: 0 
+  const [editedProduct, setEditedProduct] = useState<Partial<Product>>({
+    name: '',
+    stock: 0,
+    price: 0
   });
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -66,18 +66,18 @@ const ServicesAndStocks = () => {
         stock: editedProduct.stock,
         price: editedProduct.price
       });
-      
+
       // Update local state
-      setServices(prevServices => 
+      setServices(prevServices =>
         prevServices.map(service => {
           if (service._id !== serviceId) return service;
-          const updatedProducts = service.products.map(p => 
+          const updatedProducts = service.products.map(p =>
             p._id === productId ? { ...p, ...editedProduct } : p
           );
           return { ...service, products: updatedProducts };
         })
       );
-      
+
       setEditingProductId(null);
       toast.success('Product updated successfully');
     } catch (error) {
@@ -123,16 +123,16 @@ const ServicesAndStocks = () => {
     }
 
     try {
+      // Get the updated service with all products from the backend
       const updatedService = await serviceApi.addProductsToService(serviceId, validProducts);
-      
-      setServices(prevServices => 
-        prevServices.map(s => 
-          s._id === serviceId 
-            ? { ...s, products: [...s.products, ...updatedService.products] } 
-            : s
+
+      // Update the services state by replacing the entire service with the updated one
+      setServices(prevServices =>
+        prevServices.map(service =>
+          service._id === serviceId ? updatedService : service
         )
       );
-      
+
       setShowAddProductModal(null);
       setProductsToAdd([{ name: '', stock: 0, price: 0 }]);
       toast.success('Products added successfully');
@@ -158,9 +158,9 @@ const ServicesAndStocks = () => {
   const handleDeleteProduct = async (serviceId: string, productId: string) => {
     try {
       await serviceApi.deleteProduct(serviceId, productId);
-      
+
       // Update the UI to remove the deleted product
-      setServices(prevServices => 
+      setServices(prevServices =>
         prevServices.map(service => {
           if (service._id === serviceId) {
             return {
@@ -171,7 +171,7 @@ const ServicesAndStocks = () => {
           return service;
         })
       );
-      
+
       toast.success('Product deleted successfully');
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -191,7 +191,7 @@ const ServicesAndStocks = () => {
     <>
       <div className="space-y-6">
         <div className="flex justify-between items-center mb-4">
-          {/* <h2 className="text-xl font-semibold text-gray-800">Services and Stocks</h2> */}
+          <h2 className="text-xl font-semibold text-gray-800">Services and Stocks</h2>
           <button
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
             onClick={() => {
@@ -364,7 +364,7 @@ const ServicesAndStocks = () => {
                     <label className="block text-sm text-gray-600">Price (£)</label>
                     <input
                       type="text"
-                      step ="0.01"
+                      step="0.01"
                       value={product.price}
                       onChange={(e) => {
                         const updated = [...newProducts];
