@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getTechnicianTickets, updateTicketStatus, addTicketNote, type TechnicianTicket, type FrontendStatus } from '@/services/ticketService';
+import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -16,62 +20,66 @@ import {
   AlertCircle,
   FileText,
   Paperclip,
+  Wrench,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Mock ticket data
-const mockAssignedTickets = [
-  {
-    id: 'TCKT-001',
-    title: 'Printer not working',
-    description: 'The printer in the admin block is not turning on.',
-    category: 'Hardware',
-    attachments: ['printer_power_issue.png'],
-    priority: 'High',
-    status: 'In Progress',
-    assignedDate: '2024-01-15',
-    customerName: 'John Doe',
-    location: 'Admin Block - Room 101',
-    estimatedTime: '2 hours',
-  },
-  {
-    id: 'TCKT-002',
-    title: 'Paper jam in printer',
-    description: 'Printer in HR department shows frequent paper jam errors.',
-    category: 'Hardware',
-    attachments: ['paper_jam.jpg'],
-    priority: 'Medium',
-    status: 'Pending',
-    assignedDate: '2024-01-16',
-    customerName: 'Sarah Wilson',
-    location: 'HR Department - Room 205',
-    estimatedTime: '1 hour',
-  },
-  {
-    id: 'TCKT-003',
-    title: 'Software installation',
-    description: 'Install new accounting software on 5 computers.',
-    category: 'Software',
-    attachments: [],
-    priority: 'Low',
-    status: 'Completed',
-    assignedDate: '2024-01-14',
-    customerName: 'Finance Team',
-    location: 'Finance Department',
-    estimatedTime: '4 hours',
-    completedDate: '2024-01-16',
-    resolution:
-      'Successfully installed accounting software on all 5 computers. Provided basic training to users.',
-  },
-];
+interface TechnicianTicketViewProps {
+  onTicketUpdate?: () => void;
+}
 
-const TechnicianTicketView = () => {
-  const [tickets, setTickets] = useState(mockAssignedTickets);
-  const [selectedTicket, setSelectedTicket] = useState(null);
+const TechnicianTicketView: React.FC<TechnicianTicketViewProps> = ({ onTicketUpdate }) => {
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState<TechnicianTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<TechnicianTicket | null>(null);
   const [resolution, setResolution] = useState('');
-  const [newStatus, setNewStatus] = useState('');
+  const [newStatus, setNewStatus] = useState<FrontendStatus>('In Progress' as FrontendStatus);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
-  const getPriorityColor = (priority) => {
+  const fetchTickets = async () => {
+    if (!user?.id) {
+      console.log('No user ID available');
+      return;
+    }
+    
+    console.log('=== Starting to fetch tickets ===');
+    console.log('User ID:', user.id);
+    console.log('User role:', user.role);
+    
+    try {
+      setIsLoading(true);
+      console.log('Calling getTechnicianTickets with user ID:', user.id);
+      const data = await getTechnicianTickets(user.id);
+      console.log('=== Tickets data received ===');
+      console.log('Data type:', typeof data);
+      console.log('Is array:', Array.isArray(data));
+      console.log('Ticket count:', data?.length || 0);
+      
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid data received:', data);
+        toast.error('Invalid data received from server');
+        return;
+      }
+      
+      console.log('Tickets before setting state:', data);
+      setTickets(data);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      toast.error('Failed to load tickets');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchTickets();
+  }, [user?.id]);
+
+  const getPriorityColor = (priority: 'High' | 'Medium' | 'Low' | string) => {
     switch (priority) {
       case 'High':
         return 'bg-red-100 text-red-800 border-red-300';
@@ -84,62 +92,110 @@ const TechnicianTicketView = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
       case 'In Progress':
         return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'Completed':
+      case 'Working On':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'Resolved':
+      case 'Closed':
         return 'bg-green-100 text-green-800 border-green-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Pending':
-        return <Clock  className="text-green-700" />;
       case 'In Progress':
-        return <AlertCircle  className="text-green-700" />;
-      case 'Completed':
-        return <CheckCircle  className="text-green-700"/>;
+        return <AlertCircle className="text-blue-700" />;
+      case 'Working On':
+        return <Wrench className="text-purple-700" />;
+      case 'Resolved':
+      case 'Closed':
+        return <CheckCircle className="text-green-700" />;
       default:
         return <FileText className="text-gray-800" />;
     }
   };
 
-  const handleUpdateTicket = () => {
-    if (!selectedTicket) return;
-
-    const updatedTickets = tickets.map((ticket) =>
-      ticket.id === selectedTicket.id
-        ? {
-            ...ticket,
-            status: newStatus || ticket.status,
-            resolution:
-              newStatus === 'Completed' ? resolution : ticket.resolution,
-            completedDate:
-              newStatus === 'Completed'
-                ? new Date().toISOString().split('T')[0]
-                : ticket.completedDate,
-          }
-        : ticket
-    );
-
-    setTickets(updatedTickets);
-    setResolution('');
-    setNewStatus('');
-    setSelectedTicket(null);
-    toast.success('Ticket updated successfully!');
+  const handleStatusUpdate = async (ticketId: string, newStatus: FrontendStatus, resolution?: string) => {
+    try {
+      setIsUpdating(true);
+      const updatedTicket = await updateTicketStatus(
+        ticketId,
+        newStatus,
+        newStatus === 'Resolved' ? resolution : undefined
+      );
+      
+      // Update local state with the updated ticket
+      setTickets(prevTickets => 
+        prevTickets.map(ticket => 
+          ticket.id === updatedTicket.id ? updatedTicket : ticket
+        )
+      );
+      
+      // Notify parent component about the update
+      if (onTicketUpdate) {
+        onTicketUpdate();
+      }
+      
+      // Also dispatch a custom event for other components to listen to
+      window.dispatchEvent(new Event('ticketUpdated'));
+      
+      toast.success(`Ticket marked as ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      toast.error('Failed to update ticket status');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const columns = ['Pending', 'In Progress', 'Completed'];
+  const columns = ['In Progress', 'Working On', 'Resolved'] as const;
+
+  if (isLoading) {
+    console.log('Loading tickets...');
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+        <p className="text-gray-600">Loading tickets...</p>
+      </div>
+    );
+  }
+
+  if (!tickets || tickets.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <FileText className="w-12 h-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-1">No tickets found</h3>
+        <p className="text-gray-500">You don't have any assigned tickets yet.</p>
+      </div>
+    );
+  }
+
+  console.log('Rendering with tickets:', tickets);
 
   return (
     <div className="p-6 max-w-full mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">My Assigned Tickets</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">My Assigned Tickets</h1>
+        <Button 
+          variant="outline"
+          size="sm"
+          onClick={() => window.location.reload()}
+          disabled={isLoading}
+          className="bg-white text-black border-black hover:bg-gray-100 hover:text-black"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : 'Refresh'}
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {columns.map((col) => (
           <div key={col}>
@@ -161,11 +217,11 @@ const TechnicianTicketView = () => {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h3 className="font-semibold text-gray-900">{ticket.title}</h3>
-                          <p className="text-sm text-gray-600">{ticket.description}</p>
+                          <p className="text-sm text-gray-600 line-clamp-2">{ticket.description}</p>
                         </div>
                         {getStatusIcon(ticket.status)}
                       </div>
-                      <div className="flex gap-2 mb-2">
+                      <div className="flex gap-2 mb-2 flex-wrap">
                         <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
                           {ticket.priority}
                         </Badge>
@@ -173,7 +229,37 @@ const TechnicianTicketView = () => {
                           {ticket.status}
                         </Badge>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <div className="mt-3 space-y-2">
+                        {ticket.status === 'In Progress' && (
+                          <Button 
+                            size="sm" 
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusUpdate(ticket.id, 'Working On');
+                            }}
+                            disabled={isUpdating}
+                          >
+                            Start Working
+                          </Button>
+                        )}
+                        
+                        {ticket.status === 'Working On' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="w-full border-green-500 text-green-700 hover:bg-green-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusUpdate(ticket.id, 'Resolved', 'Completed by technician');
+                            }}
+                            disabled={isUpdating}
+                          >
+                            Mark as Resolved
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
                         <strong>Location:</strong> {ticket.location}
                       </p>
                     </CardContent>
@@ -198,31 +284,15 @@ const TechnicianTicketView = () => {
           <p className="text-gray-700 mb-2">{selectedTicket.description}</p>
 
           <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-  <div>
-    <span className="text-gray-600 font-medium">ID:</span>
-    <p className="text-gray-800">{selectedTicket.id}</p>
-  </div>
-  <div>
-    <span className="text-gray-600 font-medium">Category:</span>
-    <p className="text-gray-800">{selectedTicket.category}</p>
-  </div>
-  <div>
-    <span className="text-gray-600 font-medium">Customer:</span>
-    <p className="text-gray-800">{selectedTicket.customerName}</p>
-  </div>
-  <div>
-    <span className="text-gray-600 font-medium">Location:</span>
-    <p className="text-gray-800">{selectedTicket.location}</p>
-  </div>
-  <div>
-    <span className="text-gray-600 font-medium">Assigned:</span>
-    <p className="text-gray-800">{selectedTicket.assignedDate}</p>
-  </div>
-  <div>
-    <span className="text-gray-600 font-medium">Est. Time:</span>
-    <p className="text-gray-800">{selectedTicket.estimatedTime}</p>
-  </div>
-</div>
+            <div>
+              <span className="text-gray-600 font-medium">Category:</span>
+              <p className="text-gray-800">{selectedTicket.category}</p>
+            </div>
+            <div>
+              <span className="text-gray-600 font-medium">Customer:</span>
+              <p className="text-gray-800">{selectedTicket.customerName}</p>
+            </div>
+          </div>
 
           <div className="flex gap-2 mb-3">
             <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
@@ -235,7 +305,7 @@ const TechnicianTicketView = () => {
 
           {selectedTicket.attachments.length > 0 && (
             <div className="mb-4">
-              <strong  className="text-gray-800">Attachments:</strong>
+              <strong className="text-gray-800">Attachments:</strong>
               <ul className="mt-1 space-y-1 text-blue-600 text-sm">
                 {selectedTicket.attachments.map((file, i) => (
                   <li key={i} className="flex items-center gap-2 cursor-pointer hover:underline">
@@ -246,48 +316,107 @@ const TechnicianTicketView = () => {
             </div>
           )}
 
-          {selectedTicket.status !== 'Completed' && (
-            <>
-              <label className="block text-sm font-medium mb-2  text-gray-800">Update Status</label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger className="bg-white text-gray-800 focus:ring-0 focus:outline-none">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem className="bg-white text-gray-800" value="Pending">Pending</SelectItem>
-                  <SelectItem  className="bg-white text-gray-800" value="In Progress">In Progress</SelectItem>
-                  <SelectItem  className="bg-white text-gray-800" value="Completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium mb-2 text-gray-800">
-                  {newStatus === 'Completed' ? 'Resolution Details' : 'Work Notes'}
-                </label>
-                <Textarea
-                  rows={4}
-                  className="bg-white text-gray-800 placeholder-gray-500 focus:ring-0 focus:outline-none"
-                  placeholder={
-                    newStatus === 'Completed'
-                      ? 'Describe the resolution...'
-                      : 'Add notes on your progress...'
-                  }
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                />
-              </div>
-
-              <Button
-                onClick={handleUpdateTicket}
-                className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                disabled={newStatus === 'Completed' && !resolution.trim()}
+          {selectedTicket.status === 'Working On' && (
+            <div className="mt-4">
+              <Button 
+                onClick={() => handleStatusUpdate(selectedTicket.id, 'Resolved', 'Completed by technician')}
+                className="w-full bg-green-600 hover:bg-green-700"
+                disabled={isUpdating}
               >
-                {newStatus === 'Completed' ? 'Mark as Completed' : 'Update Ticket'}
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Mark as Resolved'
+                )}
               </Button>
-            </>
+            </div>
           )}
 
-          {selectedTicket.status === 'Completed' && selectedTicket.resolution && (
+          {/* Comments Section */}
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Comments</h4>
+            
+            {/* Comments List */}
+            {selectedTicket.notes?.length > 0 ? (
+              <div className="space-y-4 mb-6">
+                {selectedTicket.notes.map((note, index) => (
+                  <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {note.createdBy?.name || 'Technician'}
+                        </p>
+                        <p className="text-xs text-gray-500 mb-2">
+                          {new Date(note.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700">{note.content}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic mb-6">No comments yet</p>
+            )}
+            
+            {/* Add Comment Form */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h5 className="text-sm font-medium text-gray-700 mb-2">Add a comment</h5>
+              <Textarea
+                placeholder="Type your comment here..."
+                className="w-full mb-3 bg-white border-gray-300 focus:border-gray-500 focus:ring-gray-500 text-black placeholder-gray-500"
+                rows={3}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={isAddingComment}
+              />
+              <div className="flex justify-end">
+                <Button 
+                  onClick={async () => {
+                    if (!newComment.trim()) return;
+                    
+                    try {
+                      setIsAddingComment(true);
+                      await addTicketNote(selectedTicket.id, newComment);
+                      
+                      // Refresh the ticket to show the new comment
+                      const updatedTickets = await getTechnicianTickets(user.id);
+                      setTickets(updatedTickets);
+                      
+                      // Update the selected ticket to show the new comment
+                      const updatedTicket = updatedTickets.find(t => t.id === selectedTicket.id);
+                      if (updatedTicket) {
+                        setSelectedTicket(updatedTicket);
+                      }
+                      
+                      setNewComment('');
+                      toast.success('Comment added successfully');
+                    } catch (error) {
+                      console.error('Error adding comment:', error);
+                      toast.error('Failed to add comment');
+                    } finally {
+                      setIsAddingComment(false);
+                    }
+                  }}
+                  disabled={!newComment.trim() || isAddingComment}
+                  size="sm"
+                  className="bg-gray-800 hover:bg-gray-900 text-white"
+                >
+                  {isAddingComment ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : 'Post Comment'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {(selectedTicket.status === 'Resolved' || selectedTicket.status === 'Closed') && selectedTicket.resolution && (
             <div className="mt-4 p-3 bg-green-50 border border-green-300 rounded">
               <h4 className="font-semibold text-green-700 mb-1">Resolution</h4>
               <p className="text-green-800 text-sm">{selectedTicket.resolution}</p>

@@ -13,12 +13,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-white group-[.toaster]:text-black group-[.toaster]:border-gray-200 group-[.toaster]:shadow-lg [&>div]:text-black",
+          success: "group toast group-[.toaster]:bg-white group-[.toaster]:text-black group-[.toaster]:border-green-200 group-[.toaster]:shadow-lg [&>div]:text-black",
+          error: "group toast group-[.toaster]:bg-white group-[.toaster]:text-black group-[.toaster]:border-red-200 group-[.toaster]:shadow-lg [&>div]:text-black",
+          info: "group toast group-[.toaster]:bg-white group-[.toaster]:text-black group-[.toaster]:border-blue-200 group-[.toaster]:shadow-lg [&>div]:text-black",
+          warning: "group toast group-[.toaster]:bg-white group-[.toaster]:text-black group-[.toaster]:border-yellow-200 group-[.toaster]:shadow-lg [&>div]:text-black",
+          description: "group-[.toast]:text-gray-900",
+          title: "group-[.toast]:text-black group-[.toast]:font-semibold",
+          actionButton: "group-[.toast]:bg-gray-900 group-[.toast]:text-white",
+          cancelButton: "group-[.toast]:bg-gray-100 group-[.toast]:text-gray-700",
         },
       }}
       {...props}

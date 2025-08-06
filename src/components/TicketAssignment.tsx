@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllTickets, getTicketById, assignTicket, Ticket } from '../services/ticketService';
+import { getAllTickets, getTicketById, assignTicket, getTechnicians, type Ticket } from '@/services/ticketService';
 import { userService } from '../services/userService';
 import { toast } from 'sonner';
 
@@ -17,16 +17,29 @@ const TicketAssignment = () => {
   const [technicians, setTechnicians] = useState<Array<{ _id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Format priority for display (capitalize first letter)
   const formatPriority = (priority: string | undefined): string => {
-    if (!priority || priority === 'medium') return ''; // Don't show default 'medium' as selected
+    if (!priority) return '';
     return priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
   };
-  
-  // Check if priority is explicitly set (not default)
+
+  // Format status for display
+  const formatStatus = (status: string) => {
+    if (!status) return 'Pending';
+    return status
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Check if ticket is resolved or closed
+  const isResolved = (status: string) => status?.toLowerCase() === 'resolved' || status?.toLowerCase() === 'closed';
+
+  // Check if priority is explicitly set (not empty)
   const isPrioritySet = (priority: string | undefined): boolean => {
-    return !!priority && priority !== 'medium';
+    return !!priority;
   };
 
   // Reset form when selectedTicket changes
@@ -41,17 +54,30 @@ const TicketAssignment = () => {
     setNotes('');
   }, [selectedTicket]);
 
+  const fetchTickets = async (status?: string) => {
+    try {
+      setLoading(true);
+      const ticketsData = await getAllTickets(status);
+      setTickets(ticketsData);
+      setError('');
+    } catch (err) {
+      setError('Failed to fetch tickets. Please try again.');
+      console.error('Error fetching tickets:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch tickets and technicians in parallel
-        const [ticketsData, techData] = await Promise.all([
-          getAllTickets(),
-          userService.getTechnicians()
-        ]);
-        setTickets(ticketsData);
+        // Fetch technicians
+        const techData = await userService.getTechnicians();
         setTechnicians(techData);
+
+        // Fetch all tickets including resolved ones
+        await fetchTickets(statusFilter === 'all' ? undefined : statusFilter);
       } catch (err) {
         setError('Failed to fetch data. Please try again.');
         console.error('Error fetching data:', err);
@@ -60,49 +86,58 @@ const TicketAssignment = () => {
       }
     };
 
-    const handleTicketSelect = async (ticketId: string) => {
-      try {
-        setLoading(true);
-        const ticket = await getTicketById(ticketId);
-        setSelectedTicket(ticket);
-        // The useEffect above will handle setting the priority and technician
-      } catch (err) {
-        setError('Failed to fetch ticket details');
-        console.error('Error fetching ticket:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [statusFilter]);
+
+  const handleTicketSelect = async (ticketId: string) => {
+    try {
+      setLoading(true);
+      const ticket = await getTicketById(ticketId);
+      setSelectedTicket(ticket);
+    } catch (err) {
+      setError('Failed to fetch ticket details');
+      console.error('Error fetching ticket:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAssign = async () => {
     if (!selectedTicket) return;
-    
+
     try {
       setLoading(true);
       const updatedTicket = await assignTicket({
         ticketId: selectedTicket._id,
         technicianId: technician,
         priority,
-        notes
+        notes,
       });
-      
+
       // Create an updated ticket object with assigned flag set to true
       const updatedTicketWithAssigned = {
         ...updatedTicket,
-        assigned: true // Ensure assigned flag is set
+        assigned: true, // Ensure assigned flag is set
       };
-      
+
+      // Filter tickets based on status filter
+      const filteredTickets = statusFilter === 'all'
+        ? tickets
+        : tickets.filter(ticket => ticket.status.toLowerCase() === statusFilter.toLowerCase());
+
+      // Show unassigned tickets by default, or all tickets if status filter is applied
+      const visibleTickets = statusFilter === 'all'
+        ? filteredTickets
+        : filteredTickets.filter(ticket => !ticket.assignedTo);
+
       // Update the tickets list with the updated ticket
-      setTickets(tickets.map(ticket => 
+      setTickets(visibleTickets.map(ticket =>
         ticket._id === updatedTicket._id ? updatedTicketWithAssigned : ticket
       ));
-      
+
       // Update the selected ticket
       setSelectedTicket(updatedTicketWithAssigned);
-      
+
       toast.success('Ticket assigned successfully!');
     } catch (err) {
       console.error('Error assigning ticket:', err);
@@ -128,7 +163,31 @@ const TicketAssignment = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Ticket List */}
           <div className="space-y-4">
-            {tickets.length === 0 ? (
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800">Tickets</h3>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value)}
+                disabled={loading}
+              >
+                <SelectTrigger className="w-[180px] bg-white text-black border-gray-300 hover:border-gray-400 focus:ring-1 focus:ring-gray-400">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all" className="text-black bg-white hover:bg-gray-100 focus:bg-gray-100">All Tickets</SelectItem>
+                  <SelectItem value="open" className="text-black hover:bg-gray-100 focus:bg-gray-100">Open</SelectItem>
+                  <SelectItem value="in_progress" className="text-black hover:bg-gray-100 focus:bg-gray-100">In Progress</SelectItem>
+                  <SelectItem value="working_on" className="text-black hover:bg-gray-100 focus:bg-gray-100">Working On</SelectItem>
+                  <SelectItem value="resolved" className="text-black hover:bg-gray-100 focus:bg-gray-100">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            ) : tickets.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No tickets found
               </div>
@@ -147,18 +206,31 @@ const TicketAssignment = () => {
                 >
                   <div className="flex justify-between items-start">
                     <h3 className="font-semibold text-gray-800">{ticket.title}</h3>
-                    {ticket.priority && ticket.priority.toLowerCase() !== 'medium' && (
+                    <div className="flex gap-2">
                       <Badge 
-                        variant="outline" 
+                        variant="outline"
                         className={`text-xs ${
-                          ticket.priority.toLowerCase() === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
-                          ticket.priority.toLowerCase() === 'urgent' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                          ticket.status?.toLowerCase() === 'resolved' ? 'bg-green-100 text-green-800 border-green-200' :
+                          ticket.status?.toLowerCase() === 'closed' ? 'bg-gray-100 text-gray-800 border-gray-200' :
                           'bg-blue-100 text-blue-800 border-blue-200'
                         }`}
                       >
-                        {ticket.priority}
+                        {ticket.status || 'Open'}
                       </Badge>
-                    )}
+                      {ticket.priority && (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            ticket.priority.toLowerCase() === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
+                            ticket.priority.toLowerCase() === 'urgent' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                            ticket.priority.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            'bg-blue-100 text-blue-800 border-blue-200'
+                          }`}
+                        >
+                          {ticket.priority}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-gray-700 mt-1 line-clamp-2">{ticket.description}</p>
                   <div className="flex justify-between items-center mt-2">
@@ -221,7 +293,7 @@ const TicketAssignment = () => {
                   <Badge variant="outline" className="text-sm bg-blue-100 text-blue-800 border-blue-300">
                     Assigned to {selectedTicket.assignedTo.name}
                   </Badge>
-                  {isPrioritySet(selectedTicket.priority) && (
+                  {selectedTicket.priority && (
                     <Badge 
                       variant="outline" 
                       className={`text-sm ${
@@ -230,7 +302,7 @@ const TicketAssignment = () => {
                         'bg-blue-100 text-blue-800 border-blue-200'
                       }`}
                     >
-                      {formatPriority(selectedTicket.priority) || 'Medium'}
+                      {formatPriority(selectedTicket.priority)}
                     </Badge>
                   )}
                 </div>
@@ -240,19 +312,17 @@ const TicketAssignment = () => {
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-800 mb-1">Assign Priority</label>
                 <Select 
-                  value={isPrioritySet(priority) ? priority : ''}
+                  value={priority || ''}
                   onValueChange={setPriority}
-                  disabled={loading}
+                  disabled={loading || isResolved(selectedTicket.status)}
                 >
-                  <SelectTrigger className="bg-white text-gray-800 border border-gray-300 focus:ring-1 focus:ring-green-400">
-                    <SelectValue placeholder={priority ? formatPriority(priority) : 'Select priority'}>
-                      {isPrioritySet(priority) ? formatPriority(priority) : 'Select priority'}
-                    </SelectValue>
+                  <SelectTrigger className="bg-yellow-100 text-black border-yellow-300 focus:ring-1 focus:ring-yellow-400">
+                    <SelectValue placeholder="Select priority" className="text-black" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-800 border border-gray-300">
+                  <SelectContent className="bg-yellow-100 text-black border-yellow-300">
                     <SelectItem 
                       value="High" 
-                      className="text-red-800 hover:bg-red-50 focus:bg-red-50"
+                      className="text-black hover:bg-yellow-200 focus:bg-yellow-200"
                     >
                       <span className="flex items-center">
                         <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
@@ -261,7 +331,7 @@ const TicketAssignment = () => {
                     </SelectItem>
                     <SelectItem 
                       value="Medium" 
-                      className="text-yellow-800 hover:bg-yellow-50 focus:bg-yellow-50"
+                      className="text-black hover:bg-yellow-200 focus:bg-yellow-200"
                     >
                       <span className="flex items-center">
                         <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
@@ -270,7 +340,7 @@ const TicketAssignment = () => {
                     </SelectItem>
                     <SelectItem 
                       value="Low" 
-                      className="text-blue-800 hover:bg-blue-50 focus:bg-blue-50"
+                      className="text-black hover:bg-yellow-200 focus:bg-yellow-200"
                     >
                       <span className="flex items-center">
                         <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
@@ -287,7 +357,7 @@ const TicketAssignment = () => {
                 <Select 
                   value={technician} 
                   onValueChange={setTechnician}
-                  disabled={loading}
+                  disabled={loading || isResolved(selectedTicket.status)}
                 >
                   <SelectTrigger className="bg-white text-gray-800 border border-gray-300 focus:ring-1 focus:ring-green-400">
                     <SelectValue placeholder="Select technician" />
@@ -306,30 +376,34 @@ const TicketAssignment = () => {
                 </Select>
               </div>
 
-              {/* Notes */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-800 mb-1">Additional Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes..."
-                  disabled={loading}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                />
-              </div>
+              {/* Additional Notes - Show for non-resolved tickets */}
+              {!isResolved(selectedTicket.status) && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-800 mb-1">Additional Notes</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional notes..."
+                    disabled={loading}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500"
+                  />
+                </div>
+              )}
 
-              {/* Assign/Edit Button */}
-              <Button
-                onClick={handleAssign}
-                disabled={!priority || !technician || loading}
-                className={`mt-6 w-full ${
-                  selectedTicket.assigned 
-                    ? 'bg-blue-600 hover:bg-blue-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } text-white disabled:bg-gray-300 disabled:cursor-not-allowed`}
-              >
-                {loading ? 'Processing...' : selectedTicket.assigned ? 'Update Assignment' : 'Assign'}
-              </Button>
+              {/* Assign/Edit Button - Show for non-resolved tickets */}
+              {!isResolved(selectedTicket.status) && (
+                <Button
+                  onClick={handleAssign}
+                  disabled={!priority || !technician || loading}
+                  className={`mt-6 w-full ${
+                    selectedTicket.assigned 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white`}
+                >
+                  {loading ? 'Processing...' : selectedTicket.assigned ? 'Update Assignment' : 'Assign'}
+                </Button>
+              )}
             </div>
           )}
         </div>

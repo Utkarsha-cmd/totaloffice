@@ -103,7 +103,7 @@ interface SupportTicket {
   category: 'billing' | 'technical' | 'account' | 'service' | 'other';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  assignedTo?: string;
+  assignedTo?: string | { _id: string; name: string; email: string } | null;
   createdAt: Date;
   updatedAt: Date;
   attachments?: Array<{ url: string; name: string; type: string }>;
@@ -974,7 +974,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </Card>
                 ) : (
                   filteredTickets.map((ticket) => (
-                    <Card key={ticket._id || ticket.ticketId} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={ticket.ticketId || String(ticket._id)} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1">
@@ -997,7 +997,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                               {ticket.assignedTo && (
                                 <span className="flex items-center gap-1">
                                   <User className="w-3 h-3" />
-                                  Assigned to: {ticket.assignedTo}
+                                  Assigned to: {
+                                    ticket.assignedTo && typeof ticket.assignedTo === 'object' 
+                                      ? (ticket.assignedTo as { name?: string }).name || 'Unassigned'
+                                      : String(ticket.assignedTo || 'Unassigned')
+                                  }
                                 </span>
                               )}
                             </div>
