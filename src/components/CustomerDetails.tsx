@@ -5,7 +5,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, FilePlus, Building2, Search, Filter, Ticket, Plus, Clock, CheckCircle, XCircle, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Edit3, Save, X, LogOut, User, Mail, Phone, MapPin, AlertCircle, 
+FilePlus, Building2, Search, Filter, Ticket, Plus, Clock, 
+CheckCircle, XCircle, AlertTriangle, MessageSquare,Home,
+Package,Calendar,FileText,HeadphonesIcon, Box, CalendarDays } from 'lucide-react';
 import axios from 'axios';
 import { authService } from '@/services/authService';
 import { supportTicketApi } from '@/services/api';
@@ -121,7 +124,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
-  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders' | 'support'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders' |'agreement'| 'support'>('profile');
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
     email: '',
@@ -159,8 +162,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       [name]: value
     }));
   };
-
-  // Handle ticket form submission is now defined below with more comprehensive error handling
 
   // Handle file attachment
   const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -460,54 +461,46 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       });
     }
   };
+  
+   const menuItems = [
+    { id: 'profile', label: 'Profile Overview', icon: User, description: 'Manage your account details' },
+    { id: 'orders', label: 'Place Order', icon: Package, description: 'Create new service orders' },
+    { id: 'deliveries', label: 'Deliveries', icon: Calendar, description: 'Track your deliveries' },
+    { id: 'support', label: 'Support Center', icon: HeadphonesIcon, description: 'Get help and support' },
+    { id: 'agreement', label: 'Service Agreement', icon: FileText, description: 'View your contracts' },
+  ];
 
   const getStatusBadgeVariant = (status: SupportTicket['status']) => {
     switch (status) {
-      case 'open':
-        return 'default';
-      case 'in-progress':
-        return 'secondary';
-      case 'resolved':
-        return 'outline';
-      case 'closed':
-        return 'destructive';
-      default:
-        return 'default';
+      case 'open':return 'default';
+      case 'in-progress':return 'secondary';
+      case 'resolved': return 'outline';
+      case 'closed':return 'destructive';
+      default:return 'default';
     }
   };
 
   const getPriorityBadgeVariant = (priority: SupportTicket['priority']) => {
     switch (priority) {
-      case 'low':
-        return 'outline';
-      case 'medium':
-        return 'secondary';
-      case 'high':
-        return 'default';
-      case 'urgent':
-        return 'destructive';
-      default:
-        return 'default';
+      case 'low':return 'outline';
+      case 'medium':return 'secondary';
+      case 'high': return 'default';
+      case 'urgent': return 'destructive';
+      default: return 'default';
     }
   };
 
   const getStatusIcon = (status: SupportTicket['status']) => {
     switch (status) {
-      case 'open':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'in-progress':
-        return <Clock className="w-4 h-4" />;
-      case 'resolved':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'closed':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <AlertCircle className="w-4 h-4" />;
+      case 'open':return <AlertCircle className="w-4 h-4" />;
+      case 'in-progress': return <Clock className="w-4 h-4" />;
+      case 'resolved': return <CheckCircle className="w-4 h-4" />;
+      case 'closed':return <XCircle className="w-4 h-4" />;
+      default:return <AlertCircle className="w-4 h-4" />;
     }
   };
 
   const handleEdit = () => {
-    // Verify the user is editing their own profile
     if (!currentUser) {
       toast({
         title: 'Authentication Error',
@@ -516,8 +509,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       });
       return;
     }
-
-    // Set the edited info to match current customer info
     setEditedInfo({
       name: customerInfo.name,
       email: customerInfo.email,
@@ -543,21 +534,16 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       });
       return;
     }
-
-    // Split name into first and last name
     const nameParts = editedInfo.name.trim().split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
     try {
-      // Prepare the updated user data
       const formData = new FormData();
       formData.append('firstName', firstName);
       formData.append('lastName', lastName);
-      formData.append('company', editedInfo.phone); // Using phone for company field
+      formData.append('company', editedInfo.phone); 
       formData.append('duration', userProfile?.duration);
-
-      // Preserve existing services
       if (userProfile?.services?.current?.length > 0) {
         userProfile.services.current.forEach(service => {
           formData.append('currentServices', service);
@@ -569,27 +555,19 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
           formData.append('pastServices', service);
         });
       }
-
-      // Update contact (email)
       formData.append('contact', editedInfo.email);
-
-      // Format and clean the billing address before saving
       const formattedBillingAddress = editedInfo.billingAddress
         .split(',')
         .map(part => part.trim())
         .filter(part => part.length > 0)
         .join(', ');
-
-      // Use the formatted billing address
       formData.append('billingAddress', formattedBillingAddress);
       formData.append('paymentInfo', userProfile?.paymentInfo || '');
 
-      // If editing document
       if (document) {
         formData.append('document', document);
       }
 
-      // Send update request
       const response = await axios.put(`http://localhost:5000/api/users/${userProfile._id}`, formData, {
         headers: {
           'Authorization': `Bearer ${currentUser.token}`,
@@ -597,7 +575,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
         }
       });
 
-      // Update local state with new data
+  
       setUserProfile(response.data);
       setCustomerInfo({
         name: editedInfo.name,
@@ -634,13 +612,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       });
     } catch (err: any) {
       console.error('Profile update error:', err);
-
-      // Handle different types of errors
       if (axios.isAxiosError(err)) {
-        // Handle Axios errors
         if (err.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           const errorMessage = err.response.data?.message ||
             `Server error: ${err.response.status}`;
           toast({
@@ -655,7 +628,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             },
           });
         } else if (err.request) {
-          // The request was made but no response was received
           toast({
             title: 'Error',
             description: 'No response from server. Please try again later.',
@@ -699,7 +671,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   };
 
   const handleCancel = () => {
-    // ... rest of the code remains the same ...
     setEditedInfo(customerInfo);
     setIsEditing(false);
     setUploadedDocs([]);
@@ -741,51 +712,88 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   };
 
   return (
-    <div className="min-h-screen p-4 bg-gray-50">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+    <div className="min-h-screen bg-[#f3fdf7] text-gray-800">
+      <div className="grid grid-cols-[260px_1fr] min-h-screen">
         {/* Sidebar */}
-        <aside className="bg-white rounded-xl border shadow-sm p-4 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-          <nav className="flex flex-col gap-2">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'profile'
-                ? 'bg-green-100 text-green-800'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'orders'
-                ? 'bg-green-100 text-green-800'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
-              Place Order
-            </button>
-            <button
-              onClick={() => setActiveTab('deliveries')}
-              className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'deliveries'
-                ? 'bg-green-100 text-green-800'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
-              Deliveries
-            </button>
-            <button
-              onClick={() => setActiveTab('support')}
-              className={`text-left px-4 py-2 rounded-md font-medium text-sm ${activeTab === 'support'
-                ? 'bg-green-100 text-green-800'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
-              <Ticket className="w-4 h-4 inline mr-2" />
-              Support Tickets
-            </button>
-          </nav>
-        </aside>
+        <aside className="bg-[#0d3324] text-white px-6 py-8 space-y-8 min-h-screen shadow-md border-r border-green-800">
+  <div>
+    <h1 className="text-2xl font-bold text-white tracking-wide">Customer Portal</h1>
+    <p className="text-sm text-green-200 mt-1">Professional Dashboard</p>
+  </div>
+
+  <nav className="flex flex-col gap-1">
+    <button
+      onClick={() => setActiveTab('profile')}
+      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+        activeTab === 'profile'
+          ? 'bg-green-100 text-green-900'
+          : 'hover:bg-green-800 hover:text-white text-green-200'
+      }`}
+    >
+      Profile Overview
+      <div className="text-xs text-green-300">Manage your account details</div>
+    </button>
+
+    <button
+      onClick={() => setActiveTab('orders')}
+      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+        activeTab === 'orders'
+          ? 'bg-green-100 text-green-900'
+          : 'hover:bg-green-800 hover:text-white text-green-200'
+      }`}
+    >
+      Place Order
+      <div className="text-xs text-green-300">Create new orders</div>
+    </button>
+
+    <button
+      onClick={() => setActiveTab('deliveries')}
+      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+        activeTab === 'deliveries'
+          ? 'bg-green-100 text-green-900'
+          : 'hover:bg-green-800 hover:text-white text-green-200'
+      }`}
+    >
+      Deliveries
+      <div className="text-xs text-green-300">Track your deliveries</div>
+    </button>
+
+    <button
+      onClick={() => setActiveTab('support')}
+      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 flex items-center ${
+        activeTab === 'support'
+          ? 'bg-green-100 text-green-900'
+          : 'hover:bg-green-800 hover:text-white text-green-200'
+      }`}
+    >
+      <Ticket className="w-4 h-4 mr-2" />
+      Support Tickets
+      <div className="text-xs text-green-300 ml-6">Get help and support</div>
+    </button>
+
+    <button
+      onClick={() => setActiveTab('agreement')}
+      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+        activeTab === 'agreement'
+          ? 'bg-green-100 text-green-900'
+          : 'hover:bg-green-800 hover:text-white text-green-200'
+      }`}
+    >
+      Service Agreement
+      <div className="text-xs text-green-300">View your contracts</div>
+    </button>
+  </nav>
+
+  <div className="pt-6 border-t border-green-800">
+    <button
+      onClick={onLogout}
+      className="w-full flex items-center justify-center text-sm font-medium text-green-200 hover:text-red-400 transition"
+    >
+      <LogOut className="w-4 h-4 mr-2" />
+      Sign Out
+    </button>
+  </div>
+</aside>
 
         {/* Main Content */}
         <main className="space-y-6">
@@ -1026,11 +1034,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 )}
               </div>
             </div>
-          ) : activeTab === 'orders' ? (
+          ) :
+           activeTab === 'orders' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
               <OrdersTab customerInfo={customerInfo} />
             </div>
+            
           ) : activeTab === 'profile' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               {/* Error message */}
@@ -1062,17 +1072,42 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     </span>
                   </div>
                 </div>
-                <Button
-                  onClick={onLogout}
-                  variant="outline"
-                  className="text-gray-500 border-gray-200 hover:bg-red-25 hover:border-red-200 hover:text-red-500"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
               </div>
 
               {/* Contact Information */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm border border-green-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Active Orders</p>
+                  <h2 className="text-2xl font-bold text-green-700">{customerInfo.activeOrders || 0}</h2>
+                </div>
+                <Box className="w-8 h-8 text-green-600" />
+              </div>
+
+              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm border border-blue-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Deliveries</p>
+                  <h2 className="text-2xl font-bold text-blue-700">{deliveriesMock.length}</h2>
+                </div>
+                <CalendarDays className="w-8 h-8 text-blue-600" />
+              </div>
+
+              <div className="rounded-xl bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 shadow-sm border border-yellow-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Open Tickets</p>
+                  <h2 className="text-2xl font-bold text-yellow-600">{supportTickets.length}</h2>
+                </div>
+                <Ticket className="w-8 h-8 text-yellow-500" />
+              </div>
+
+              <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 shadow-sm border border-emerald-100 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Account Status</p>
+                  <h2 className="text-2xl font-bold text-emerald-700">Active</h2>
+                </div>
+                <CheckCircle className="w-8 h-8 text-emerald-600" />
+              </div>
+            </div>
               <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-xl text-black">
@@ -1275,279 +1310,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
         </main>
       </div>
     </div>
-
-    // <div className="min-h-screen p-4">
-    //   <div className="max-w-4xl mx-auto space-y-6">
-    //     {/* Error message */}
-    //     {error && (
-    //       <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-3 text-red-700">
-    //         <AlertCircle className="w-5 h-5" />
-    //         <p>{error}</p>
-    //       </div>
-    //     )}
-
-    //     {/* Loading indicator */}
-    //     {loading && (
-    //       <div className="text-center py-8">
-    //         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
-    //         <p className="mt-2 text-gray-600">Loading your profile...</p>
-    //       </div>
-    //     )}
-    //     {/* Header */}
-    //     <div className="flex justify-between items-center">
-    //       <div className="flex items-center gap-4">
-    //         <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center">
-    //           <User className="w-6 h-6 text-green-600" />
-    //         </div>
-    //         <div>
-    //           <h1 className="text-3xl font-bold text-gray-700">Welcome, {customerInfo.name}!</h1>
-    //           <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 mt-1">
-    //             {userType.charAt(0).toUpperCase() + userType.slice(1)}
-    //           </span>
-    //         </div>
-    //       </div>
-    //       <Button
-    //         onClick={onLogout}
-    //         variant="outline"
-    //         className="text-gray-500 border-gray-200 hover:bg-red-25 hover:border-red-200 hover:text-red-500"
-    //       >
-    //         <LogOut className="w-4 h-4 mr-2" />
-    //         Logout
-    //       </Button>
-    //     </div>
-
-    //     {/* Contact Information */}
-    //     <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
-    //       <CardHeader className="flex flex-row items-center justify-between">
-    //         <CardTitle className="flex items-center gap-2 text-xl text-black">
-    //           <Mail className="w-5 h-5 text-green-500" />
-    //           Contact Information
-    //         </CardTitle>
-    //         {!isEditing ? (
-    //           <Button
-    //             onClick={handleEdit}
-    //             className="bg-gradient-to-r from-green-100 to-emerald-100 hover:from-green-150 hover:to-emerald-150 text-green-700 border-none shadow-sm"
-    //           >
-    //             <Edit3 className="w-4 h-4 mr-2" />
-    //             Edit
-    //           </Button>
-    //         ) : (
-    //           <div className="flex gap-2">
-    //             <Button
-    //               onClick={handleSave}
-    //               className="bg-green-50 hover:bg-green-100 text-green-700 border-green-100"
-    //             >
-    //               <Save className="w-4 h-4 mr-2" />
-    //               Save
-    //             </Button>
-    //             <Button
-    //               onClick={handleCancel}
-    //               variant="outline"
-    //               className="border-gray-200 text-gray-500"
-    //             >
-    //               <X className="w-4 h-4 mr-2" />
-    //               Cancel
-    //             </Button>
-    //           </div>
-    //         )}
-    //       </CardHeader>
-    //       <CardContent className="space-y-4">
-    //         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    //           {/* Name */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="name" className="flex items-center gap-2 text-black">
-    //               <User className="w-4 h-4 text-green-500" />
-    //               Full Name
-    //             </Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="name"
-    //                 value={editedInfo.name}
-    //                 onChange={(e) => updateField('name', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.name}</p>
-    //             )}
-    //           </div>
-
-    //           {/* Email */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="email" className="flex items-center gap-2 text-gray-700">
-    //               <Mail className="w-4 h-4 text-green-500" />
-    //               Email
-    //             </Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="email"
-    //                 type="email"
-    //                 value={editedInfo.email}
-    //                 onChange={(e) => updateField('email', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //                 disabled // Disable email field as it's used for authentication
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.email}</p>
-    //             )}
-    //           </div>
-
-    //           {/* Company - Full width */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="company" className="flex items-center gap-2 text-black">
-    //               <Building2 className="w-4 h-4 text-green-500" />
-    //               Company
-    //             </Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="company"
-    //                 value={userProfile?.company || ''}
-    //                 onChange={(e) => {
-    //                   if (userProfile) {
-    //                     setUserProfile({...userProfile, company: e.target.value});
-    //                   }
-    //                 }}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //                 placeholder="Enter company name"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{userProfile?.company || 'Not specified'}</p>
-    //             )}
-    //           </div>
-
-    //           {/* Phone - Full width */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="phone" className="flex items-center gap-2 text-black">
-    //               <Phone className="w-4 h-4 text-green-500" />
-    //               Phone
-    //             </Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="phone"
-    //                 value={editedInfo.phone}
-    //                 onChange={(e) => updateField('phone', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //                 placeholder="Enter phone number"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.phone || 'Not specified'}</p>
-    //             )}
-    //           </div>
-    //         </div>
-    //       </CardContent>
-    //     </Card>
-
-    //     {/* Address Information */}
-    //     <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
-    //       <CardHeader>
-    //         <CardTitle className="flex items-center gap-2 text-xl text-black">
-    //           <MapPin className="w-5 h-5 text-green-500" />
-    //           Address Information
-    //         </CardTitle>
-    //       </CardHeader>
-    //       <CardContent className="space-y-4">
-    //         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    //           {/* Street */}
-    //           <div className="space-y-2 md:col-span-2">
-    //             <Label htmlFor="street" className="text-black">Street Address</Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="street"
-    //                 value={editedInfo.address.street}
-    //                 onChange={(e) => updateAddressField('street', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.street}</p>
-    //             )}
-    //           </div>
-
-    //           {/* City */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="city" className="text-black">City</Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="city"
-    //                 value={editedInfo.address.city}
-    //                 onChange={(e) => updateAddressField('city', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.city}</p>
-    //             )}
-    //           </div>
-
-    //           {/* State */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="state" className="text-black">State</Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="state"
-    //                 value={editedInfo.address.state}
-    //                 onChange={(e) => updateAddressField('state', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.state}</p>
-    //             )}
-    //           </div>
-
-    //           {/* ZIP Code */}
-    //           <div className="space-y-2">
-    //             <Label htmlFor="zipCode" className="text-black">ZIP Code</Label>
-    //             {isEditing ? (
-    //               <Input
-    //                 id="zipCode"
-    //                 value={editedInfo.address.zipCode}
-    //                 onChange={(e) => updateAddressField('zipCode', e.target.value)}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
-    //               />
-    //             ) : (
-    //               <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.address.zipCode}</p>
-    //             )}
-    //           </div>
-    //         </div>
-    //       </CardContent>
-    //     </Card>
-
-    //     {/* Document Upload */}
-    //     <Card className="bg-white/95 backdrop-blur-sm border border-green-50 shadow-sm">
-    //       <CardHeader>
-    //         <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
-    //           <FilePlus className="w-5 h-5 text-green-500" />
-    //           Attach Documents (KYC, etc.)
-    //         </CardTitle>
-    //       </CardHeader>
-    //       <CardContent className="space-y-4">
-    //         <div className="space-y-2">
-    //           <Label htmlFor="kycDocs" className="text-gray-600">Upload Files</Label>
-    //           {isEditing ? (
-    //             <>
-    //               <Input
-    //                 id="kycDocs"
-    //                 type="file"
-    //                 accept=".pdf,.jpg,.jpeg,.png"
-    //                 multiple
-    //                 onChange={handleFileChange}
-    //                 className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100"
-    //               />
-    //               {uploadedDocs.length > 0 && (
-    //                 <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
-    //                   {uploadedDocs.map((file, index) => (
-    //                     <li key={index}>{file.name}</li>
-    //                   ))}
-    //                 </ul>
-    //               )}
-    //             </>
-    //           ) : (
-    //             <p className="p-2 bg-gray-25 rounded-md text-gray-500 italic">
-    //               No documents attached
-    //             </p>
-    //           )}
-    //         </div>
-    //       </CardContent>
-    //     </Card>
-    //   </div>
-    // </div>
   );
 };
 
