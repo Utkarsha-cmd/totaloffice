@@ -149,7 +149,7 @@ const TicketAssignment = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Support Tickets</h2>
+      <h1 className="text-2xl font-semibold mb-4 text-gray-800">Support Tickets</h1>
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}

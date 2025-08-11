@@ -642,13 +642,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-[#0d3324] shadow-lg transform transition-transform duration-300 ease-in-out",
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           "md:relative md:translate-x-0"
         )}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 bg-green-700 text-white">
+          <div className="flex items-center justify-between h-16 px-4 bg-[#0d3324] text-white">
             <div className="flex items-center space-x-2">
               <LayoutDashboard className="h-6 w-6" />
               <span className="text-xl font-semibold">Admin Panel</span>
@@ -661,21 +661,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             </button>
           </div>
 
-          <nav className="flex-1 px-2 py-4 space-y-1">
+          <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => (
               <button
                 key={item.name}
                 onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'orders')}
                 className={cn(
                   item.current
-                    ? 'bg-green-50 text-green-700 border-r-4 border-green-600'
-                    : 'text-gray-600 hover:bg-gray-100',
+                    ? 'bg-green-100 text-green-900 border-r-4 border-green-600'
+  : 'text-green-200 hover:bg-green-800 hover:text-white',
                   'group flex items-center w-full px-4 py-3 text-sm font-medium rounded-md transition-colors duration-200'
                 )}
               >
                 <item.icon
                   className={cn(
-                    item.current ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500',
+                    item.current ? 'text-green-700' : 'text-green-300 group-hover:text-white',
                     'mr-3 flex-shrink-0 h-5 w-5'
                   )}
                   aria-hidden="true"
@@ -688,12 +688,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center">
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{username}</p>
-                <p className="text-xs font-medium text-gray-500">{userType}</p>
+                <p className="text-sm font-medium text-green-100">{username}</p>
+                <p className="text-xs font-medium text-green-300">{userType}</p>
               </div>
               <button
                 onClick={onLogout}
-                className="ml-auto text-sm text-red-600 hover:text-red-800"
+                className="ml-auto text-sm text-red-400 hover:text-red-200"
               >
                 Sign out
               </button>
@@ -715,7 +715,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders' : 'Services and Stocks'}
+                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders' : activeTab === 'services'?'Services and Stocks' : 'Support Tickets'}
               </h1>
             </div>
 
@@ -730,7 +730,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 />
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   Add Customer
                 </button>
@@ -815,49 +815,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                   </ResponsiveContainer>
                 </div>
               </div>
-
-              {/* Service Distribution Chart */}
-              {/* <div className="bg-white p-6 rounded-lg border border-green-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-green-800 mb-4">Service Distribution</h3>
-                <div className="flex flex-col lg:flex-row items-center">
-                  <div className="w-full lg:w-1/2">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={serviceDistribution}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {serviceDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="w-full lg:w-1/2 lg:pl-6">
-                    <div className="space-y-3">
-                      {serviceDistribution.map((service, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                          <div className="flex items-center">
-                            <div 
-                              className="w-4 h-4 rounded mr-3"
-                              style={{ backgroundColor: service.color }}
-                            />
-                            <span className="text-sm font-medium text-green-800">{service.name}</span>
-                          </div>
-                          <span className="text-sm text-green-600 font-semibold">{service.value}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div> */}
             </div>
           )
             : activeTab === 'services' ? (
@@ -868,245 +825,261 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <TicketAssignment />
               )
                 : (
-                  <>
-                    {/* Search bar for non-dashboard tabs */}
-                    {/* <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Search by name or company..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-gray-800 placeholder-gray-400"
-                />
-              </div> */}
+  <>
+  {/* Content based on active tab */}
+  {activeTab === 'orders' ? (
+    // Orders tab content
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-2">
+          <input
+            type="text"
+            placeholder="Search orders..."
+            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+          <button
+            onClick={fetchOrders}
+            className="p-1.5 text-gray-500 hover:text-gray-700"
+            title="Refresh orders"
+          >
+            <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        <button
+          onClick={handleDownloadCSV}
+          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-white-700 bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Export CSV
+        </button>
+      </div>
 
-                    {/* Content based on active tab */}
-                    {activeTab === 'orders' ? (
-                      // Orders tab content
-                      <div className="space-y-6">
-                        <div className="flex justify-between items-center mb-4">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              placeholder="Search orders..."
-                              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                            <button
-                              onClick={fetchOrders}
-                              className="p-1.5 text-gray-500 hover:text-gray-700"
-                              title="Refresh orders"
-                            >
-                              <RefreshCw className={`h-4 w-4 ${ordersLoading ? 'animate-spin' : ''}`} />
-                            </button>
-                          </div>
-                          <button
-                            onClick={handleDownloadCSV}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                          >
-                            Export CSV
-                          </button>
-                        </div>
+      {ordersLoading ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+          <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Orders will appear here when customers make purchases.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <OrderCard
+              key={order._id}
+              order={order}
+              onStatusUpdate={handleStatusUpdate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  ) : (
+    // Customer details/history tabs
+    <div>
+      {filteredCustomers.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">
+          No customers found. Add a new customer to get started.
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {filteredCustomers.map((customer) => (
+            <div
+              key={customer._id}
+              className="bg-white rounded-lg shadow-md border border-gray-200 p-6 relative hover:shadow-lg transition-shadow duration-200"
+            >
+              {activeTab === 'details' ? (
+                <>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {customer.firstName} {customer.lastName}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Company</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {customer.company || 'N/A'}
+                      </p>
 
-                        {ordersLoading ? (
-                          <div className="flex justify-center items-center h-40">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
-                          </div>
-                        ) : orders.length === 0 ? (
-                          <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                            <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                            <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
-                            <p className="mt-1 text-sm text-gray-500">Orders will appear here when customers make purchases.</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {orders.map((order) => (
-                              <OrderCard
-                                key={order._id}
-                                order={order}
-                                onStatusUpdate={handleStatusUpdate}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      // Customer details/history tabs
+                      <p className="text-sm font-medium text-gray-700">Email</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {customer.email || 'N/A'}
+                      </p>
+
+                      <p className="text-sm font-medium text-gray-700">Phone</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {customer.phone || 'N/A'}
+                      </p>
+
+                      <p className="text-sm font-medium text-gray-700">VAT Code</p>
+                      <p className="text-sm text-gray-600">
+                        {customer.vatCode || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Payment Info</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {customer.paymentInfo || 'N/A'}
+                      </p>
+
+                      <p className="text-sm font-medium text-gray-700">Billing Address</p>
+                      <p className="text-sm text-gray-600">
+                        {customer.billingAddress || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        {filteredCustomers.length === 0 ? (
-                          <div className="text-center py-10 text-gray-500">
-                            No customers found. Add a new customer to get started.
-                          </div>
-                        ) : (
-                          <div className="grid gap-6">
-                            {filteredCustomers.map((customer) => (
-                              <div key={customer._id} className="border border-green-100 p-4 rounded-lg shadow-md bg-white relative">
-                                {activeTab === 'details' ? (
-                                  <>
-                                    <h2 className="text-xl font-semibold text-green-800">{customer.firstName} {customer.lastName}</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700">Company</p>
-                                        <p className="text-sm text-gray-600 mb-2">{customer.company || 'N/A'}</p>
-
-                                        <p className="text-sm font-medium text-gray-700">Email</p>
-                                        <p className="text-sm text-gray-600 mb-2">{customer.email || 'N/A'}</p>
-
-                                        <p className="text-sm font-medium text-gray-700">Phone</p>
-                                        <p className="text-sm text-gray-600 mb-2">{customer.phone || 'N/A'}</p>
-
-                                        <p className="text-sm font-medium text-gray-700">VAT Code</p>
-                                        <p className="text-sm text-gray-600">{customer.vatCode || 'N/A'}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                                        <p className="text-sm text-gray-600 mb-2">{customer.paymentInfo || 'N/A'}</p>
-
-                                        <p className="text-sm font-medium text-gray-700">Billing Address</p>
-                                        <p className="text-sm text-gray-600">{customer.billingAddress || 'N/A'}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mt-4">
-                                      <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                          <p className="text-sm font-medium text-green-700 mb-1">Current Services</p>
-                                          <ul className="list-disc list-inside">
-                                            {customer.services?.current?.length > 0 ? (
-                                              customer.services.current.map((service, i) => (
-                                                <li key={i} className="text-sm text-gray-700">{service}</li>
-                                              ))
-                                            ) : (
-                                              <li className="text-sm text-gray-400">No current services</li>
-                                            )}
-                                          </ul>
-                                        </div>
-                                        {/* <div className="flex items-center justify-between mb-1">
-                                      <p className="text-sm font-medium text-gray-700">Service History</p>
-                                      <ul className='list-disc list-inside'>
-                                         {customer.services?.past?.length > 0 ? (
-                                           customer.services.past.map((service, i) => (
-                                             <li key={i} className="text-sm text-gray-500">{service}</li>
-                                            ))
-                                          ) : (
-                                            <li className="text-sm text-gray-400">No current services</li>
-                                          )}
-                                      </ul>    
-                                    </div> */}
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700 mb-1">Service History</p>
-                                          <ul className="list-disc list-inside">
-                                            {customer.services?.past?.length > 0 ? (
-                                              customer.services.past.map((service, i) => (
-                                                <li key={i} className="text-sm text-gray-500">{service}</li>
-                                              ))
-                                            ) : (
-                                              <li className="text-sm text-gray-400">No past services</li>
-                                            )}
-                                          </ul>
-                                          <div className="mt-2">
-                                            <Link
-                                              to={`/customer-history/${customer._id}`}
-                                              className="text-sm text-blue-600 hover:underline"
-                                            >
-                                              View Full History
-                                            </Link>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {customer.document && (
-                                      <div className="mt-4">
-                                        <p className="text-sm font-medium text-gray-700">Document</p>
-                                        {typeof customer.document === 'string' ? (
-                                          <a
-                                            href={`http://localhost:5000${customer.document}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline"
-                                          >
-                                            View Document
-                                          </a>
-                                        ) : (
-                                          <p className="text-sm text-blue-600">{customer.document.name}</p>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    <div className="absolute top-4 right-4 flex space-x-2">
-                                      <button
-                                        onClick={() => handleEditCustomer(customer)}
-                                        className="text-blue-500 hover:text-blue-700 text-sm mr-2"
-                                        title="Edit Customer"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteCustomer(customer._id || '')}
-                                        className="text-red-500 hover:text-red-700 text-sm"
-                                        title="Delete Customer"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <h2 className="text-lg font-semibold text-gray-800">{customer.firstName} {customer.lastName}</h2>
-                                        <p className="text-sm text-gray-600">{customer.company || 'No company'}</p>
-                                      </div>
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                        {customer.duration}
-                                      </span>
-                                    </div>
-
-                                    <div className="mt-4 space-y-3">
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700">Payment Information</p>
-                                        <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                          <p className="text-sm font-medium text-green-700">Current Services</p>
-                                          <ul className="mt-1 space-y-1">
-                                            {customer.services.current.map((service, i) => (
-                                              <li key={i} className="text-sm text-gray-700">• {service}</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700">Service History</p>
-                                          <ul className="mt-1 space-y-1">
-                                            {customer.services.past.map((service, i) => (
-                                              <li key={i} className="text-sm text-gray-500">• {service}</li>
-                                            ))}
-                                            {customer.services.past.length === 0 && (
-                                              <li className="text-sm text-gray-400">No past services</li>
-                                            )}
-                                          </ul>
-                                          <div className="mt-2">
-                                            <Link
-                                              to={`/customer-history/${customer._id}`}
-                                              className="text-sm text-blue-600 hover:underline"
-                                            >
-                                              View Full History
-                                            </Link>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <p className="text-sm font-medium text-gray-800 mb-1">
+                          Current Services
+                        </p>
+                        <ul className="list-disc list-inside">
+                          {customer.services?.current?.length > 0 ? (
+                            customer.services.current.map((service, i) => (
+                              <li key={i} className="text-sm text-gray-700">
+                                {service}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-sm text-gray-400">No current services</li>
+                          )}
+                        </ul>
                       </div>
-                    )}
-                  </>
-                )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-1">
+                          Service History
+                        </p>
+                        <ul className="list-disc list-inside">
+                          {customer.services?.past?.length > 0 ? (
+                            customer.services.past.map((service, i) => (
+                              <li key={i} className="text-sm text-gray-500">
+                                {service}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-sm text-gray-400">No past services</li>
+                          )}
+                        </ul>
+                        <div className="mt-2">
+                          <Link
+                            to={`/customer-history/${customer._id}`}
+                            className="text-sm text-indigo-600 hover:underline"
+                          >
+                            View Full History
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {customer.document && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium text-gray-700">Document</p>
+                      {typeof customer.document === 'string' ? (
+                        <a
+                          href={`http://localhost:5000${customer.document}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-indigo-600 hover:underline"
+                        >
+                          View Document
+                        </a>
+                      ) : (
+                        <p className="text-sm text-indigo-600">{customer.document.name}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="absolute top-4 right-4 flex space-x-2">
+                    <button
+                      onClick={() => handleEditCustomer(customer)}
+                      className="text-indigo-600 hover:text-indigo-800 text-sm mr-2"
+                      title="Edit Customer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCustomer(customer._id || '')}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                      title="Delete Customer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-800">
+                        {customer.firstName} {customer.lastName}
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {customer.company || 'No company'}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600">
+                      {customer.duration}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Payment Information
+                      </p>
+                      <p className="text-sm text-gray-600">{customer.paymentInfo}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-indigo-600">Current Services</p>
+                        <ul className="mt-1 space-y-1">
+                          {customer.services.current.map((service, i) => (
+                            <li key={i} className="text-sm text-gray-700">
+                              • {service}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Service History</p>
+                        <ul className="mt-1 space-y-1">
+                          {customer.services.past.map((service, i) => (
+                            <li key={i} className="text-sm text-gray-500">
+                              • {service}
+                            </li>
+                          ))}
+                          {customer.services.past.length === 0 && (
+                            <li className="text-sm text-gray-400">No past services</li>
+                          )}
+                        </ul>
+                        <div className="mt-2">
+                          <Link
+                            to={`/customer-history/${customer._id}`}
+                            className="text-sm text-indigo-600 hover:underline"
+                          >
+                            View Full History
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</>
+
+)
+}
 
           {showAddForm && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">

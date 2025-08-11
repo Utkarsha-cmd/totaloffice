@@ -312,18 +312,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
           console.log('User profile data:', userData);
 
           if (userData) {
-            // Set the complete user profile
             setUserProfile(userData);
-
-            // Combine firstName and lastName for display
             const fullName = (userData.firstName || '') + (userData.lastName ? ` ${userData.lastName}` : '');
-
-            // Get the correct email (prioritize email over contact)
             const userEmail = userData.email || userData.contact || customerInfo.email || '';
-
-            // Update customer info with the profile data
             setCustomerInfo(prev => ({
-              ...prev, // Keep any existing values
+              ...prev, 
               name: fullName,
               email: userEmail,
               phone: userData.phone || userData.company || prev.phone || '',
@@ -335,11 +328,10 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               },
             }));
           } else {
-            setError('User profile not found. Please contact support.');
+            setError('User profile not found.');
           }
         } catch (err: any) {
           console.error('Error fetching user profile:', err);
-          // Handle different error cases
           if (err.response?.status === 401) {
             setError('Authentication failed. Please log in again.');
           } else if (err.response?.status === 403) {
@@ -361,7 +353,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     fetchUserData();
   }, []);
 
-  // Fetch support tickets when user is loaded
+
   useEffect(() => {
     if (currentUser) {
       fetchSupportTickets();
@@ -463,11 +455,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   };
   
    const menuItems = [
-    { id: 'profile', label: 'Profile Overview', icon: User, description: 'Manage your account details' },
-    { id: 'orders', label: 'Place Order', icon: Package, description: 'Create new service orders' },
-    { id: 'deliveries', label: 'Deliveries', icon: Calendar, description: 'Track your deliveries' },
-    { id: 'support', label: 'Support Center', icon: HeadphonesIcon, description: 'Get help and support' },
-    { id: 'agreement', label: 'Service Agreement', icon: FileText, description: 'View your contracts' },
+    { id: 'profile', label: 'Profile Overview', icon: User},
+    { id: 'orders', label: 'Place Order', icon: Package },
+    { id: 'deliveries', label: 'Deliveries', icon: Calendar},
+    { id: 'support', label: 'Support Center', icon: HeadphonesIcon },
+    { id: 'agreement', label: 'Service Agreement', icon: FileText},
   ];
 
   const getStatusBadgeVariant = (status: SupportTicket['status']) => {
@@ -714,327 +706,338 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   return (
     <div className="min-h-screen bg-[#f3fdf7] text-gray-800">
       <div className="grid grid-cols-[260px_1fr] min-h-screen">
-        {/* Sidebar */}
-        <aside className="bg-[#0d3324] text-white px-6 py-8 space-y-8 min-h-screen shadow-md border-r border-green-800">
-  <div>
-    <h1 className="text-2xl font-bold text-white tracking-wide">Customer Portal</h1>
-    <p className="text-sm text-green-200 mt-1">Professional Dashboard</p>
-  </div>
+       <aside className="bg-[#0d3324] text-white px-6 py-8 space-y-8 min-h-screen shadow-md border-r border-green-800 flex flex-col">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white tracking-wide">Customer Portal</h1>
+        <p className="text-sm text-green-200 mt-1">{username}</p>
+      </div>
 
-  <nav className="flex flex-col gap-1">
-    <button
-      onClick={() => setActiveTab('profile')}
-      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-        activeTab === 'profile'
-          ? 'bg-green-100 text-green-900'
-          : 'hover:bg-green-800 hover:text-white text-green-200'
-      }`}
-    >
-      Profile Overview
-      <div className="text-xs text-green-300">Manage your account details</div>
-    </button>
+      {/* Navigation */}
+      <nav className="flex flex-col gap-1 flex-1 overflow-y-auto mt-8">
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+            activeTab === 'profile'
+              ? 'bg-green-100 text-green-900'
+              : 'hover:bg-green-800 hover:text-white text-green-200'
+          }`}
+        >
+          <User className="w-4 h-4 mr-2 mt-0.5" />
+          <div>
+            Profile Overview
+          </div>
+        </button>
 
-    <button
-      onClick={() => setActiveTab('orders')}
-      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-        activeTab === 'orders'
-          ? 'bg-green-100 text-green-900'
-          : 'hover:bg-green-800 hover:text-white text-green-200'
-      }`}
-    >
-      Place Order
-      <div className="text-xs text-green-300">Create new orders</div>
-    </button>
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+            activeTab === 'orders'
+              ? 'bg-green-100 text-green-900'
+              : 'hover:bg-green-800 hover:text-white text-green-200'
+          }`}
+        >
+          <Package className="w-4 h-4 mr-2 mt-0.5" />
+          <div>
+            Place Order
+          </div>
+        </button>
 
-    <button
-      onClick={() => setActiveTab('deliveries')}
-      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-        activeTab === 'deliveries'
-          ? 'bg-green-100 text-green-900'
-          : 'hover:bg-green-800 hover:text-white text-green-200'
-      }`}
-    >
-      Deliveries
-      <div className="text-xs text-green-300">Track your deliveries</div>
-    </button>
+        <button
+          onClick={() => setActiveTab('deliveries')}
+          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+            activeTab === 'deliveries'
+              ? 'bg-green-100 text-green-900'
+              : 'hover:bg-green-800 hover:text-white text-green-200'
+          }`}
+        >
+          <Calendar className="w-4 h-4 mr-2 mt-0.5" />
+          <div>
+            Deliveries
+          </div>
+        </button>
 
-    <button
-      onClick={() => setActiveTab('support')}
-      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 flex items-center ${
-        activeTab === 'support'
-          ? 'bg-green-100 text-green-900'
-          : 'hover:bg-green-800 hover:text-white text-green-200'
-      }`}
-    >
-      <Ticket className="w-4 h-4 mr-2" />
-      Support Tickets
-      <div className="text-xs text-green-300 ml-6">Get help and support</div>
-    </button>
+        <button
+          onClick={() => setActiveTab('support')}
+          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+            activeTab === 'support'
+              ? 'bg-green-100 text-green-900'
+              : 'hover:bg-green-800 hover:text-white text-green-200'
+          }`}
+        >
+          <Ticket className="w-4 h-4 mr-2 mt-0.5" />
+          <div>
+            Support Tickets
+          </div>
+        </button>
 
-    <button
-      onClick={() => setActiveTab('agreement')}
-      className={`text-left px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-        activeTab === 'agreement'
-          ? 'bg-green-100 text-green-900'
-          : 'hover:bg-green-800 hover:text-white text-green-200'
-      }`}
-    >
-      Service Agreement
-      <div className="text-xs text-green-300">View your contracts</div>
-    </button>
-  </nav>
+        <button
+          onClick={() => setActiveTab('agreement')}
+          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+            activeTab === 'agreement'
+              ? 'bg-green-100 text-green-900'
+              : 'hover:bg-green-800 hover:text-white text-green-200'
+          }`}
+        >
+          <FileText className="w-4 h-4 mr-2 mt-0.5" />
+          <div>
+            Service Agreement
+          </div>
+        </button>
+      </nav>
 
-  <div className="pt-6 border-t border-green-800">
-    <button
-      onClick={onLogout}
-      className="w-full flex items-center justify-center text-sm font-medium text-green-200 hover:text-red-400 transition"
-    >
-      <LogOut className="w-4 h-4 mr-2" />
-      Sign Out
-    </button>
-  </div>
-</aside>
-
+      {/* Sign Out at Bottom */}
+      <div className="sticky bottom-0 bg-[#0d3324] border-t border-green-800 p-4">
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 text-sm font-medium hover:text-red-400 transition"
+          >
+            <X className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+    </aside>
+ 
         {/* Main Content */}
         <main className="space-y-6">
-          {activeTab === 'support' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {/* Header */}
-              <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-700">Support Tickets</h1>
-                <Button
-                  onClick={() => setIsCreatingTicket(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Ticket
-                </Button>
+  {activeTab === 'support' ? (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-700">Support Tickets</h1>
+        <Button
+          onClick={() => setIsCreatingTicket(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Create Ticket
+        </Button>
+      </div>
+
+      {/* Create Ticket Modal/Form */}
+      {isCreatingTicket && (
+        <Card className="bg-white border border-emerald-100 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
+              <Plus className="w-5 h-5 text-emerald-500" />
+              Create New Support Ticket
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Title */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="ticketTitle" className="text-gray-700">Issue Title *</Label>
+                <Input
+                  id="ticketTitle"
+                  value={ticketForm.title}
+                  onChange={(e) => setTicketForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="bg-white border-emerald-100 focus:border-emerald-200 text-gray-700"
+                />
               </div>
 
-              {/* Create Ticket Modal/Form */}
-              {isCreatingTicket && (
-                <Card className="bg-white border border-green-100 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl text-gray-700">
-                      <Plus className="w-5 h-5 text-green-500" />
-                      Create New Support Ticket
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Title */}
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="ticketTitle" className="text-gray-700">Issue Title *</Label>
-                        <Input
-                          id="ticketTitle"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm(prev => ({ ...prev, title: e.target.value }))}
-                          className="bg-white border-green-100 focus:border-green-200 text-gray-700"
-                        />
-                      </div>
+              {/* Category */}
+              <div className="space-y-2">
+                <Label className="text-gray-700">Category</Label>
+                <Select
+                  value={ticketForm.category}
+                  onValueChange={(value: SupportTicket['category']) =>
+                    setTicketForm(prev => ({ ...prev, category: value }))
+                  }
+                >
+                  <SelectTrigger className="bg-white border-emerald-100 text-gray-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technical" className="bg-white text-gray-700">Technical Issue</SelectItem>
+                    <SelectItem value="billing" className="bg-white text-gray-700">Billing Question</SelectItem>
+                    <SelectItem value="account" className="bg-white text-gray-700">Account Help</SelectItem>
+                    <SelectItem value="service" className="bg-white text-gray-700">Service Request</SelectItem>
+                    <SelectItem value="other" className="bg-white text-gray-700">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                      {/* Category */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-700">Category</Label>
-                        <Select
-                          value={ticketForm.category}
-                          onValueChange={(value: SupportTicket['category']) =>
-                            setTicketForm(prev => ({ ...prev, category: value }))
-                          }
-                        >
-                          <SelectTrigger className="bg-white border-green-100 text-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="technical" className="bg-white text-gray-700">Technical Issue</SelectItem>
-                            <SelectItem value="billing" className="bg-white text-gray-700">Billing Question</SelectItem>
-                            <SelectItem value="account" className="bg-white text-gray-700">Account Help</SelectItem>
-                            <SelectItem value="service" className="bg-white text-gray-700">Service Request</SelectItem>
-                            <SelectItem value="other" className="bg-white text-gray-700">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+              {/* Priority - Hidden but set to medium by default */}
+              <input type="hidden" value="medium" />
 
-                      {/* Priority - Hidden but set to medium by default */}
-                      <input type="hidden" value="medium" />
+              {/* Description */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="ticketDescription" className="text-gray-700">Description *</Label>
+                <Textarea
+                  id="ticketDescription"
+                  value={ticketForm.description}
+                  onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="bg-white border-emerald-100 focus:border-emerald-200 min-h-[120px] text-gray-700"
+                />
+              </div>
 
-                      {/* Description */}
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="ticketDescription" className="text-gray-700">Description *</Label>
-                        <Textarea
-                          id="ticketDescription"
-                          value={ticketForm.description}
-                          onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
-                          className="bg-white border-green-100 focus:border-green-200 min-h-[120px] text-gray-700"
-                        />
-                      </div>
-
-                      {/* Attachments */}
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="ticketAttachments" className="text-gray-700">Attachments</Label>
-                        <Input
-                          id="ticketAttachments"
-                          type="file"
-                          multiple
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          onChange={handleTicketAttachmentChange}
-                          className="bg-white border-green-100 text-gray-700"
-                        />
-                        {ticketAttachments.length > 0 && (
-                          <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
-                            {ticketAttachments.map((file, index) => (
-                              <li key={index}>{file.name}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-4">
-                      <Button
-                        onClick={handleCreateTicket}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Ticket className="w-4 h-4 mr-2" />
-                        Create Ticket
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setIsCreatingTicket(false);
-                          setTicketForm({
-                            title: '',
-                            description: '',
-                            category: 'technical',
-                            priority: 'medium',
-                          });
-                          setTicketAttachments([]);
-                        }}
-                        variant="outline"
-                        className="border-gray-200 text-gray-500"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Search and Filter */}
-              <Card className="bg-white border border-gray-100 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 w-4 h-4" />
-                        <Input
-                          value={ticketSearchTerm}
-                          onChange={(e) => setTicketSearchTerm(e.target.value)}
-                          className="pl-10 bg-white text-gray-700 border-gray-700"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Select
-                        value={ticketStatusFilter}
-                        onValueChange={setTicketStatusFilter}
-                      >
-                        <SelectTrigger className=" bg-white border-gray-200 text-gray-700">
-                          <Filter className="w-4 h-4 mr-2" />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all" className="bg-white text-gray-700">All Status</SelectItem>
-                          <SelectItem value="open" className="bg-white text-gray-700">Open</SelectItem>
-                          <SelectItem value="in-progress" className="bg-white text-gray-700">In Progress</SelectItem>
-                          <SelectItem value="resolved" className="bg-white text-gray-700">Resolved</SelectItem>
-                          <SelectItem value="closed" className="bg-white text-gray-700">Closed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tickets List */}
-              <div className="space-y-4">
-                {filteredTickets.length === 0 ? (
-                  <Card className="bg-white border border-gray-100 shadow-sm">
-                    <CardContent className="p-8 text-center">
-                      <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-500 mb-2">No Support Tickets</h3>
-                      <p className="text-gray-400 mb-4">
-                        {ticketSearchTerm || ticketStatusFilter !== 'all'
-                          ? 'No tickets match your search criteria.'
-                          : 'You haven\'t created any support tickets yet.'
-                        }
-                      </p>
-                      {!ticketSearchTerm && ticketStatusFilter === 'all' && (
-                        <Button
-                          onClick={() => setIsCreatingTicket(true)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Your First Ticket
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  filteredTickets.map((ticket) => (
-                    <Card key={ticket.ticketId || String(ticket._id)} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-lg font-semibold text-gray-800">{ticket.title}</h3>
-                              <Badge variant="outline" className="text-xs text-black">
-                                {ticket.ticketId}
-                              </Badge>
-                            </div>
-                            <p className="text-gray-600 mb-3 line-clamp-2">{ticket.description}</p>
-                            <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Building2 className="w-3 h-3" />
-                                {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {new Date(ticket.createdAt).toLocaleDateString()}
-                              </span>
-                              {ticket.assignedTo && (
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  Assigned to: {
-                                    ticket.assignedTo && typeof ticket.assignedTo === 'object' 
-                                      ? (ticket.assignedTo as { name?: string }).name || 'Unassigned'
-                                      : String(ticket.assignedTo || 'Unassigned')
-                                  }
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-4">
-                            {getStatusIcon(ticket.status)}
-                            <Badge variant={getStatusBadgeVariant(ticket.status)} className="text-black">
-                              {ticket.status.replace('-', ' ').toUpperCase()}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        {ticket.attachments && ticket.attachments.length > 0 && (
-                          <div className="text-gray-800 file:text-gray-800 file:border-0 file:mr-4 file:py-1.5 file:px-3 file:bg-gray-100 file:rounded-md">
-                            <FilePlus className="w-3 h-3 text-gray-800" />
-                            {ticket.attachments.length} attachment(s)
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
+              {/* Attachments */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="ticketAttachments" className="text-gray-700">Attachments</Label>
+                <Input
+                  id="ticketAttachments"
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  onChange={handleTicketAttachmentChange}
+                  className="bg-white border-emerald-100 text-gray-700"
+                />
+                {ticketAttachments.length > 0 && (
+                  <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
+                    {ticketAttachments.map((file, index) => (
+                      <li key={index}>{file.name}</li>
+                    ))}
+                  </ul>
                 )}
               </div>
             </div>
-          ) :
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleCreateTicket}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Ticket className="w-4 h-4 mr-2" />
+                Create Ticket
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsCreatingTicket(false);
+                  setTicketForm({
+                    title: '',
+                    description: '',
+                    category: 'technical',
+                    priority: 'medium',
+                  });
+                  setTicketAttachments([]);
+                }}
+                variant="outline"
+                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Search and Filter */}
+      <Card className="bg-white border border-gray-100 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-700 w-4 h-4" />
+                <Input
+                  value={ticketSearchTerm}
+                  onChange={(e) => setTicketSearchTerm(e.target.value)}
+                  className="pl-10 bg-white text-gray-700 border-gray-700"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Select
+                value={ticketStatusFilter}
+                onValueChange={setTicketStatusFilter}
+              >
+                <SelectTrigger className=" bg-white border-gray-200 text-gray-700">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="bg-white text-gray-700">All Status</SelectItem>
+                  <SelectItem value="open" className="bg-white text-gray-700">Open</SelectItem>
+                  <SelectItem value="in-progress" className="bg-white text-gray-700">In Progress</SelectItem>
+                  <SelectItem value="resolved" className="bg-white text-gray-700">Resolved</SelectItem>
+                  <SelectItem value="closed" className="bg-white text-gray-700">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tickets List */}
+      <div className="space-y-4">
+        {filteredTickets.length === 0 ? (
+          <Card className="bg-white border border-gray-100 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-500 mb-2">No Support Tickets</h3>
+              <p className="text-gray-400 mb-4">
+                {ticketSearchTerm || ticketStatusFilter !== 'all'
+                  ? 'No tickets match your search criteria.'
+                  : 'You haven\'t created any support tickets yet.'
+                }
+              </p>
+              {!ticketSearchTerm && ticketStatusFilter === 'all' && (
+                <Button
+                  onClick={() => setIsCreatingTicket(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Ticket
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredTickets.map((ticket) => (
+            <Card key={ticket.ticketId || String(ticket._id)} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-800">{ticket.title}</h3>
+                      <Badge variant="outline" className="text-xs text-black">
+                        {ticket.ticketId}
+                      </Badge>
+                    </div>
+                    <p className="text-gray-600 mb-3 line-clamp-2">{ticket.description}</p>
+                    <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(ticket.createdAt).toLocaleDateString()}
+                      </span>
+                      {ticket.assignedTo && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          Assigned to: {
+                            ticket.assignedTo && typeof ticket.assignedTo === 'object' 
+                              ? (ticket.assignedTo as { name?: string }).name || 'Unassigned'
+                              : String(ticket.assignedTo || 'Unassigned')
+                          }
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 ml-4">
+                    {getStatusIcon(ticket.status)}
+                    <Badge variant={getStatusBadgeVariant(ticket.status)} className="text-black">
+                      {ticket.status.replace('-', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+
+                {ticket.attachments && ticket.attachments.length > 0 && (
+                  <div className="text-gray-800 file:text-gray-800 file:border-0 file:mr-4 file:py-1.5 file:px-3 file:bg-gray-100 file:rounded-md">
+                    <FilePlus className="w-3 h-3 text-gray-800" />
+                    {ticket.attachments.length} attachment(s)
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  ) :
            activeTab === 'orders' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>

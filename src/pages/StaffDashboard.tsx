@@ -102,71 +102,93 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Side Navigation */}
-      <aside className="w-64 bg-white border-r min-h-screen">
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Navigation</h2>
-          <nav className="space-y-2">
-            <button
-              onClick={() => setActiveTab('customers')}
-              className={`block w-full text-left px-4 py-2 rounded-lg font-medium ${
-                activeTab === 'customers' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Customers
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`block w-full text-left px-4 py-2 rounded-lg font-medium ${
-                activeTab === 'orders' ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Orders
-            </button>
-          </nav>
-        </div>
-      </aside>
+      <aside className="bg-[#0d3324] text-white min-h-screen shadow-md border-r border-green-800 flex flex-col">
+  {/* Header */}
+  <div className="px-6 py-8">
+    <h1 className="text-2xl font-bold text-white tracking-wide">Staff Portal</h1>
+    <p className="text-sm text-green-200 mt-1">{username}</p>
+  </div>
+
+  {/* Navigation - scrollable */}
+  <div className="flex-1 overflow-y-auto px-6">
+    <nav className="flex flex-col gap-1">
+      <button
+        onClick={() => setActiveTab('customers')}
+        className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+          activeTab === 'customers'
+            ? 'bg-green-100 text-green-900'
+            : 'hover:bg-green-800 hover:text-white text-green-200'
+        }`}
+      >
+        <Users className="w-4 h-4 mr-2 mt-0.5" />
+        <div>Customer Details</div>
+      </button>
+
+      <button
+        onClick={() => setActiveTab('orders')}
+        className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+          activeTab === 'orders'
+            ? 'bg-green-100 text-green-900'
+            : 'hover:bg-green-800 hover:text-white text-green-200'
+        }`}
+      >
+        <Package className="w-4 h-4 mr-2 mt-0.5" />
+        <div>Orders</div>
+      </button>
+    </nav>
+  </div>
+
+  {/* Sticky Footer */}
+  <div className="sticky bottom-0 bg-[#0d3324] border-t border-green-800 p-4">
+    <button
+      onClick={onLogout}
+      className="flex items-center gap-2 text-sm font-medium hover:text-red-400 transition"
+    >
+      <X className="w-4 h-4" />
+      Sign Out
+    </button>
+  </div>
+</aside>
+
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-white shadow">
-          <div className="px-6 py-4 flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {username}</span>
-              <button
-                onClick={onLogout}
-                className="px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </header>
-
         <main className="flex-1 px-6 py-6">
           {activeTab === 'customers' ? (
             <>
               {/* Search */}
               <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="relative w-1/3">
-                    <input
-                      type="text"
-                      placeholder="Search customers..."
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <div className="absolute left-3 top-2.5 text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
+  <div className="flex justify-between items-center mb-4">
+    <div className="relative w-1/3">
+      <input
+        type="text"
+        placeholder="Search customers..."
+        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg 
+                   text-gray-800 placeholder-gray-400
+                   focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div className="absolute left-3 top-2.5 text-gray-400">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
 
               {/* Customer List */}
               <div className="bg-white shadow overflow-hidden sm:rounded-lg">

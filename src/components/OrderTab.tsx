@@ -594,6 +594,7 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
         title: 'Order Failed',
         description: error.message || 'There was an error placing your order. Please try again.',
         variant: 'destructive',
+        className: 'bg-white text-black border-emerald-300 border border-gray-200',
       });
     }
   };
@@ -604,143 +605,148 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
 
   return (
     <div className="space-y-6">
-      {!selectedService ? (
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">Select a Service</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {services.map(service => (
-              <Card
-                key={service._id}
-                className="cursor-pointer hover:shadow-md transition-shadow bg-white"
-                onClick={() => setSelectedService(service._id)}
-              >
-                <CardHeader>
-                  <CardTitle className="text-lg text-black">{service.serviceName}</CardTitle>
-                  <p className="text-sm text-gray-500">{service.description}</p>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
-          {/* Products */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-700">
-                {services.find(s => s._id === selectedService)?.serviceName} Products
-              </h2>
-              <Button
-                className="text-gray-700 border-gray-300 hover:bg-gray-100"
-                variant="outline"
-                onClick={() => setSelectedService('')}
-              >
-                Back to Services
-              </Button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {selectedProducts.map(product => (
-                <Card key={product.id} className="bg-white border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-800">{product.name}</h3>
-                      <div className="text-right">
-                        <div className="font-bold text-lg text-gray-700">${product.price}</div>
-                        <span
-                          className={`text-xs font-medium px-2 py-1 rounded ${product.inStock > 0
-                            ? 'bg-gray-200 text-gray-800'
-                            : 'bg-gray-100 text-gray-500'
-                            }`}
-                        >
-                          {product.inStock > 0
-                            ? `${product.inStock} in stock`
-                            : 'Out of stock'}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-3">{product.description}</p>
-                    <Button
-                      onClick={() => addToCart(product)}
-                      disabled={product.inStock === 0}
-                      className="w-full bg-gray-800 text-white hover:bg-gray-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add to Cart
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Cart */}
-          <Card className="h-fit sticky top-4 bg-white border border-gray-200">
+  {!selectedService ? (
+    <div>
+      <h2 className="text-2xl font-semibold text-gray-700 mb-6">Select a Service</h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {services.map(service => (
+          <Card
+            key={service._id}
+            tabIndex={0}
+            className="cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+            onClick={() => setSelectedService(service._id)}
+          >
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-700">
-                <ShoppingCart className="w-5 h-5" />
-                Cart ({cart.length})
-              </CardTitle>
+              <CardTitle className="text-lg text-black">{service.serviceName}</CardTitle>
+              <p className="text-sm text-gray-500">{service.description}</p>
             </CardHeader>
-            <CardContent>
-              {cart.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Your cart is empty</p>
-              ) : (
-                <div className="space-y-4">
-                  {cart.map(item => (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-800">{item.name}</div>
-                        <div className="text-sm text-gray-500">${item.price} each</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-gray-700 border-gray-300"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={e =>
-                            updateQuantity(item.id, parseInt(e.target.value) || 0)
-                          }
-                          className="w-16 text-center text-gray-800 border-gray-300"
-                          min="0"
-                          max={item.inStock}
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-gray-700 border-gray-300"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="font-semibold text-gray-700">Total:</span>
-                      <span className="font-bold text-lg text-gray-900">
-                        ${getCartTotal().toFixed(2)}
-                      </span>
-                    </div>
-                    <Button className="w-full bg-gray-800 text-white hover:bg-gray-700"
-                      onClick={placeOrder}>
-                      Place Order
+          </Card>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
+      {/* Products */}
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold text-gray-700">
+            {services.find(s => s._id === selectedService)?.serviceName} Products
+          </h2>
+          <Button
+            className="text-emerald-700 border-emerald-300 hover:bg-emerald-100 
+             focus-visible:ring-2 focus-visible:ring-emerald-500 
+             focus-visible:border-emerald-500 focus:outline-none"
+            variant="outline"
+            onClick={() => setSelectedService('')}
+          >
+            Back to Services
+          </Button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {selectedProducts.map(product => (
+            <Card key={product.id} className="bg-white border border-gray-200">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-800">{product.name}</h3>
+                  <div className="text-right">
+                    <div className="font-bold text-lg text-gray-700">${product.price}</div>
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded ${product.inStock > 0
+                        ? 'bg-gray-200 text-gray-800'
+                        : 'bg-gray-100 text-gray-500'
+                        }`}
+                    >
+                      {product.inStock > 0
+                        ? `${product.inStock} in stock`
+                        : 'Out of stock'}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mb-3">{product.description}</p>
+                <Button
+                  onClick={() => addToCart(product)}
+                  disabled={product.inStock === 0}
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add to Cart
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Cart */}
+      <Card className="h-fit sticky top-4 bg-white border border-gray-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-700">
+            <ShoppingCart className="w-5 h-5" />
+            Cart ({cart.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {cart.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Your cart is empty</p>
+          ) : (
+            <div className="space-y-4">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="font-medium text-sm text-gray-800">{item.name}</div>
+                    <div className="text-sm text-gray-500">${item.price} each</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-emerald-700 border border-emerald-500 hover:bg-emerald-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    >
+                      <Minus className="w-3 h-3" />
+                    </Button>
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={e =>
+                        updateQuantity(item.id, parseInt(e.target.value) || 0)
+                      }
+                      className="w-16 text-center text-gray-800 border border-emerald-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 rounded-md"
+                      min="0"
+                      max={item.inStock}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-emerald-700 border border-emerald-500 hover:bg-emerald-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Plus className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              ))}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold text-gray-700">Total:</span>
+                  <span className="font-bold text-lg text-gray-900">
+                    ${getCartTotal().toFixed(2)}
+                  </span>
+                </div>
+                <Button
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                  onClick={placeOrder}
+                >
+                  Place Order
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  )}
+</div>
   );
 };
