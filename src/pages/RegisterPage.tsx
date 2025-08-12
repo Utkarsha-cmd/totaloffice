@@ -37,7 +37,7 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (form.password !== form.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -51,7 +51,7 @@ const RegisterPage = () => {
     try {
       setIsLoading(true);
       const phoneNumber = `${form.countryCode}${form.phone}`;
-      
+
       await register({
         name: form.name,
         email: form.email,
@@ -59,7 +59,7 @@ const RegisterPage = () => {
         phone: phoneNumber,
         role: form.role,
       });
-      
+
       toast.success('Registration successful! Please log in.');
       navigate('/login');
     } catch (error) {
@@ -69,6 +69,9 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
+
+  const inputClass =
+    "h-10 pl-10 bg-white border border-gray-300 text-black placeholder-gray-400 outline-none focus:ring-0 focus:border-emerald-500";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
@@ -80,31 +83,26 @@ const RegisterPage = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-gray-700">
-                  Full Name
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                    className="pl-10 bg-white text-yellow-600 placeholder-yellow-400"
-                  />
-                </div>
+            {/* Name */}
+            <div>
+              <Label htmlFor="name" className="text-gray-700">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                  className={inputClass}
+                />
               </div>
             </div>
 
             {/* Email */}
-            <div className="relative">
-              <Label htmlFor="email" className="text-gray-700">
-                Email
-              </Label>
+            <div>
+              <Label htmlFor="email" className="text-gray-700">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
@@ -114,22 +112,20 @@ const RegisterPage = () => {
                   value={form.email}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-white text-yellow-600 placeholder-yellow-400"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             {/* Phone */}
             <div>
-              <Label htmlFor="phone" className="text-gray-700">
-                Phone Number
-              </Label>
+              <Label htmlFor="phone" className="text-gray-700">Phone Number</Label>
               <div className="flex">
                 <select
                   name="countryCode"
                   value={form.countryCode}
                   onChange={handleChange}
-                  className="p-2 rounded-l bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
+                  className="h-10 px-2 bg-white border border-gray-300 text-black outline-none focus:ring-0 focus:border-emerald-500 rounded-l"
                 >
                   {countryCodes.map((country) => (
                     <option key={country.code} value={country.code}>
@@ -138,7 +134,7 @@ const RegisterPage = () => {
                   ))}
                 </select>
                 <div className="relative w-full">
-                  <Phone className="absolute left-3 bottom-3 text-gray-400" size={16} />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                   <Input
                     id="phone"
                     type="tel"
@@ -146,7 +142,7 @@ const RegisterPage = () => {
                     value={form.phone}
                     onChange={handleChange}
                     required
-                    className="pl-9 rounded-l-none bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
+                    className="h-10 pl-9 bg-white border border-gray-300 text-black placeholder-gray-400 outline-none focus:ring-0 focus:border-emerald-500 rounded-l-none"
                   />
                 </div>
               </div>
@@ -154,9 +150,7 @@ const RegisterPage = () => {
 
             {/* Role */}
             <div>
-              <Label htmlFor="role" className="text-gray-700">
-                Role
-              </Label>
+              <Label htmlFor="role" className="text-gray-700">Role</Label>
               <div className="relative">
                 <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <select
@@ -164,7 +158,7 @@ const RegisterPage = () => {
                   name="role"
                   value={form.role}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                  className="h-10 w-full pl-10 pr-3 bg-white border border-gray-300 text-black outline-none focus:ring-0 focus:border-emerald-500 rounded-md"
                   required
                 >
                   <option value="customer">Customer</option>
@@ -177,38 +171,42 @@ const RegisterPage = () => {
             </div>
 
             {/* Password */}
-            <div className="relative">
+            <div>
               <Label htmlFor="password" className="text-black font-semibold">Password</Label>
-              <Lock className="absolute left-3 bottom-3 text-gray-400" size={16} />
-              <Input
-                id="password"
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <Input
+                  id="password"
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className="h-10 pl-9 bg-white border border-gray-300 text-black placeholder-gray-400 outline-none focus:ring-0 focus:border-emerald-500"
+                />
+              </div>
             </div>
 
             {/* Confirm Password */}
-            <div className="relative">
+            <div>
               <Label htmlFor="confirmPassword" className="text-black font-semibold">Confirm Password</Label>
-              <Lock className="absolute left-3 bottom-3 text-gray-400" size={16} />
-              <Input
-                id="confirmPassword"
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                className="pl-9 bg-gray-50 border border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-green-500"
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="h-10 pl-9 bg-white border border-gray-300 text-black placeholder-gray-400 outline-none focus:ring-0 focus:border-emerald-500"
+                />
+              </div>
             </div>
 
             {/* Submit */}
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md transition duration-300"
               disabled={isLoading}
             >
@@ -217,7 +215,11 @@ const RegisterPage = () => {
 
             <div className="text-center text-sm mt-3 text-gray-600">
               Already have an account?{' '}
-              <button onClick={() => navigate('/')} className="text-green-600 hover:underline">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="text-green-600 hover:underline"
+              >
                 Login here
               </button>
             </div>
