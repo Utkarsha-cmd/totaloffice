@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Shield,Building2, CheckCircle, Users, Wrench, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import './LoginPage.css';
 
 interface LoginPageProps {
   onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff', username: string) => void;
@@ -193,8 +194,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   value={useremail}
                   onChange={(e) => setUseremail(e.target.value)}
                   className="pl-9 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-green-600 
-             focus:outline-none focus:ring-0 focus:border-green-600 
-             text-black dark:text-white"
+                    focus:outline-none focus:ring-0 focus:border-green-600 focus:ring-0 focus:ring-offset-0
+                    text-black dark:text-white ring-0 ring-offset-0"
                   required
                 />
               </div>
@@ -215,7 +216,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-green-600 focus:border-green-600 focus:ring-0 text-black dark:text-white pl-9"
+                  className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-green-600 
+                    focus:border-green-600 focus:ring-0 focus:ring-offset-0 text-black dark:text-white pl-9
+                    ring-0 ring-offset-0"
                   required
                 />
                 <button

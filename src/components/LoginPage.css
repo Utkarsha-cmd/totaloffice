@@ -1,0 +1,27 @@
+/* Remove default browser focus styles */
+input:focus,
+input:focus-visible,
+input:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #059669 !important; /* green-600 */
+}
+
+/* Remove autofill yellow background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #000 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* For dark mode */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus, 
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #374151 inset !important; /* gray-700 */
+  -webkit-text-fill-color: #fff !important;
+}
