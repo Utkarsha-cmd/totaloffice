@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, Users, Clock, Menu, X, History, Package, Search, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, ChevronDown, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, X, History, Package, FileSignature, RefreshCw, TrendingUp, ShoppingCart, UserCheck, CheckCircle, Truck, FileText, Edit, Trash2, LogOut} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Order } from '../hooks/order';
@@ -8,6 +8,8 @@ import { orderService } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
 import ServicesAndStocks from '@/components/ServiceandStock';
 import TicketAssignment from '@/components/TicketAssignment';
+import ServiceAgreementSection from '@/components/ServiceAgreementSection';
+import Quotes from '@/components/Quotes';
 
 interface AdminDashboardProps {
   username: string;
@@ -17,6 +19,7 @@ interface AdminDashboardProps {
 
 import { User, userService } from '../services/userService';
 import { serviceApi } from '../services/api';
+
 
 interface ServiceProduct {
   _id: string;
@@ -43,7 +46,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   const [error, setError] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'orders' | 'services' | "tickets">("details");
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'details' | 'orders' | 'services'|'quotes'| 'serviceagreement' | 'tickets'>("details");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showHistory, setShowHistory] = useState<{ [key: string]: boolean }>({});
   const [newCustomer, setNewCustomer] = useState<UserWithFile>({
@@ -229,7 +232,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
         setDashboardStats({
           totalOrders: ordersData.length,
           totalCustomers: customersData.length,
-          totalServices: 11, // Always show 11 services
+          totalServices: 11, 
           ordersReceived: ordersData.filter(order =>
             ['pending', 'processing', 'shipped', 'delivered'].includes(order.status)
           ).length,
@@ -347,6 +350,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
     { name: 'Orders', tab: 'orders', icon: Package, current: activeTab === 'orders' },
     { name: 'Services and Stocks', tab: 'services', icon: Truck, current: activeTab === 'services' },
     { name: 'Support Tickets', icon: History, tab: 'tickets', current: activeTab === 'tickets' },
+     { name: 'Quotes', icon: FileSignature , tab: 'quotes', current: activeTab === 'quotes' },
+    { name: 'Service Agreement', icon: FileText, tab: 'serviceagreement', current: activeTab === 'serviceagreement' },
   ];
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -638,7 +643,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#f3fdf7]">
       {/* Sidebar */}
       <div
         className={cn(
@@ -665,13 +670,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             {navigation.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'orders')}
+                onClick={() => setActiveTab(item.tab as 'dashboard' | 'details' | 'orders'|'tickets'|'quotes'| 'serviceagreement')}
                 className={cn(
                   item.current
                     ? 'bg-green-100 text-green-900 border-r-4 border-green-600'
   : 'text-green-200 hover:bg-green-800 hover:text-white',
-                  'group flex items-center w-full px-4 py-3 text-sm font-medium rounded-md transition-colors duration-200'
+                  'group flex items-center w-full px-4 py-3 text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-0 focus:border-transparent active:outline-none'
                 )}
+                style={{ outline: 'none', boxShadow: 'none' }}
               >
                 <item.icon
                   className={cn(
@@ -685,17 +691,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             ))}
           </nav>
 
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-100">{username}</p>
-                <p className="text-xs font-medium text-green-300">{userType}</p>
-              </div>
+          <div className="p-4 border-t border-green-700">
+            <div className="flex justify-center">
               <button
                 onClick={onLogout}
-                className="ml-auto text-sm text-red-400 hover:text-red-200"
+                className="flex items-center space-x-2 text-sm text-white hover:text-green-200 transition-colors duration-200"
               >
-                Sign out
+                <LogOut className="w-4 h-4" />
+                <span>Sign out</span>
               </button>
             </div>
           </div>
@@ -715,7 +718,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders' : activeTab === 'services'?'Services and Stocks' : 'Support Tickets'}
+                {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders':activeTab === 'quotes' ? 'Quotes ':activeTab === 'serviceagreement' ? 'Service Agreements' : activeTab === 'services'?'Services and Stocks' : 'Support Tickets'}
               </h1>
             </div>
 
@@ -776,7 +779,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                           borderRadius: '8px'
                         }}
                       />
-                      <Bar dataKey="orders" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="orders" fill="#059669" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="delivered" fill="#34d399" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -800,9 +803,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                       <Line
                         type="monotone"
                         dataKey="orders"
-                        stroke="#10b981"
+                        stroke="#059669"
                         strokeWidth={3}
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                        dot={{ fill: '#059669', strokeWidth: 2, r: 6 }}
                       />
                       <Line
                         type="monotone"
@@ -823,7 +826,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             )
               : activeTab === 'tickets' ? (
                 <TicketAssignment />
+              ): activeTab === 'quotes' ? (
+                <Quotes />
               )
+              : activeTab === 'serviceagreement' ? (
+              <ServiceAgreementSection
+              />
+            )
                 : (
   <>
   {/* Content based on active tab */}
@@ -893,23 +902,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
             >
               {activeTab === 'details' ? (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {customer.firstName} {customer.lastName}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {customer.firstName} {customer.lastName}
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditCustomer(customer)}
+                        className="text-indigo-600 hover:text-indigo-800 p-1 rounded hover:bg-indigo-50 transition-colors"
+                        title="Edit Customer"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCustomer(customer._id || '')}
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Delete Customer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                     <div>
                       <p className="text-sm font-medium text-gray-700">Company</p>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 mb-1">
                         {customer.company || 'N/A'}
                       </p>
 
                       <p className="text-sm font-medium text-gray-700">Email</p>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 mb-1">
                         {customer.email || 'N/A'}
                       </p>
 
                       <p className="text-sm font-medium text-gray-700">Phone</p>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 mb-1">
                         {customer.phone || 'N/A'}
                       </p>
 
@@ -920,7 +947,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700">Payment Info</p>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 mb-1">
                         {customer.paymentInfo || 'N/A'}
                       </p>
 
@@ -931,12 +958,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                     </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Services</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium text-gray-800 mb-1">
                           Current Services
                         </p>
+                      <ul className="list-disc list-inside">
+                        {customer.services?.current?.length > 0 ? (
+                          customer.services.current.map((service, i) => (
+                            <li key={i} className="text-sm text-gray-700">
+                              {service}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-sm text-gray-400">No current services</li>
+                        )}
+                      </ul>
                         <ul className="list-disc list-inside">
                           {customer.services?.current?.length > 0 ? (
                             customer.services.current.map((service, i) => (
@@ -976,7 +1014,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                     </div>
                   </div>
                   {customer.document && (
-                    <div className="mt-4">
+                    <div className="mt-3">
                       <p className="text-sm font-medium text-gray-700">Document</p>
                       {typeof customer.document === 'string' ? (
                         <a
@@ -993,22 +1031,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                     </div>
                   )}
 
-                  <div className="absolute top-4 right-4 flex space-x-2">
-                    <button
-                      onClick={() => handleEditCustomer(customer)}
-                      className="text-indigo-600 hover:text-indigo-800 text-sm mr-2"
-                      title="Edit Customer"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCustomer(customer._id || '')}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                      title="Delete Customer"
-                    >
-                      Delete
-                    </button>
-                  </div>
+
                 </>
               ) : (
                 <>
@@ -1084,7 +1107,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
           {showAddForm && (
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
-                <h2 className="text-xl font-semibold mb-4 text-blue-700">Add New Customer</h2>
+                <h2 className="text-xl font-semibold mb-4 text-emerald-600">Add New Customer</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
                   {/* 1. Postcode + Address */}
@@ -1103,7 +1126,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                           type="button"
                           onClick={handlePostcodeLookup}
                           disabled={isLoadingAddress}
-                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                          className="px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 whitespace-nowrap"
                         >
                           {isLoadingAddress ? 'Looking...' : 'Find'}
                         </button>
@@ -1307,13 +1330,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setShowAddForm(false)}
-                    className="text-sm text-gray-600 border border-gray-300 rounded px-4 py-2 hover:bg-gray-100"
+                    className="text-sm text-white-600 border border-red-300  bg-red-400 rounded px-4 py-2 hover:bg-red-600"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleAddCustomer}
-                    className="text-sm text-white bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+                    className="text-sm text-white bg-emerald-600 px-4 py-2 rounded hover:bg-emerald-700"
                   >
                     Add Customer
                   </button>

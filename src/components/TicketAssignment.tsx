@@ -170,15 +170,15 @@ const TicketAssignment = () => {
                 onValueChange={(value) => setStatusFilter(value)}
                 disabled={loading}
               >
-                <SelectTrigger className="w-[180px] bg-white text-black border-gray-300 hover:border-gray-400 focus:ring-1 focus:ring-gray-400">
+                <SelectTrigger className="w-[180px] bg-white text-black border-emerald-300 hover:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none active:border-emerald-500 active:ring-emerald-500 active:outline-none" style={{ outline: 'none', boxShadow: 'none' }}>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all" className="text-black bg-white hover:bg-gray-100 focus:bg-gray-100">All Tickets</SelectItem>
-                  <SelectItem value="open" className="text-black hover:bg-gray-100 focus:bg-gray-100">Open</SelectItem>
-                  <SelectItem value="in_progress" className="text-black hover:bg-gray-100 focus:bg-gray-100">In Progress</SelectItem>
-                  <SelectItem value="working_on" className="text-black hover:bg-gray-100 focus:bg-gray-100">Working On</SelectItem>
-                  <SelectItem value="resolved" className="text-black hover:bg-gray-100 focus:bg-gray-100">Resolved</SelectItem>
+                <SelectContent className="bg-white border-emerald-200">
+                  <SelectItem value="all" className="text-black bg-white hover:bg-emerald-50 focus:bg-emerald-100 focus:text-emerald-900">All Tickets</SelectItem>
+                  <SelectItem value="open" className="text-black hover:bg-emerald-50 focus:bg-emerald-100 focus:text-emerald-900">Open</SelectItem>
+                  <SelectItem value="in_progress" className="text-black hover:bg-emerald-50 focus:bg-emerald-100 focus:text-emerald-900">In Progress</SelectItem>
+                  <SelectItem value="working_on" className="text-black hover:bg-emerald-50 focus:bg-emerald-100 focus:text-emerald-900">Working On</SelectItem>
+                  <SelectItem value="resolved" className="text-black hover:bg-emerald-50 focus:bg-emerald-100 focus:text-emerald-900">Resolved</SelectItem>
                 </SelectContent>
               </Select>
             </div>

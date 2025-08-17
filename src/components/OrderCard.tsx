@@ -158,23 +158,43 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="gap-2 !bg-emerald-600 hover:!bg-emerald-700 !text-white hover:!text-white !border-emerald-600 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!text-white transition-colors duration-200"
                     disabled={isSaving}
                   >
                     <CalendarPlus className="h-4 w-4 " />
                     {date ? format(date, 'MMM dd') : 'Set delivery'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={handleDateChange}
-                    initialFocus
-                    disabled={isSaving}
-                  />
+                <PopoverContent className="w-auto p-0 !bg-white !border-gray-200 !shadow-lg" align="end">
+                  <div className="!bg-white p-3 rounded-md overflow-hidden !border-gray-200" style={{ backgroundColor: 'white !important', borderColor: '#e5e7eb !important' }}>
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={handleDateChange}
+                      initialFocus
+                      disabled={isSaving}
+                      className="!bg-white"
+                      style={{ backgroundColor: 'white !important' }}
+                      classNames={{
+                        months: "!bg-white",
+                        month: "!bg-white space-y-4",
+                        table: "!bg-white w-full border-collapse space-y-1",
+                        head_row: "!bg-white flex",
+                        row: "!bg-white flex w-full mt-2",
+                        day_selected: "!bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white focus:!bg-emerald-600 focus:!text-white",
+                        day_today: "!bg-emerald-100 !text-emerald-800 font-semibold",
+                        day: "!bg-white !text-gray-600 hover:!bg-gray-100 hover:!text-gray-900 focus:!bg-gray-100 focus:!text-gray-900 h-9 w-9 p-0 font-normal",
+                        cell: "!bg-white !text-gray-600 h-9 w-9 text-center text-sm p-0 relative",
+                        head_cell: "!bg-white !text-gray-500 rounded-md w-9 font-normal text-[0.8rem]",
+                        caption: "!bg-white flex justify-center pt-1 relative items-center",
+                        caption_label: "!bg-white !text-gray-900 text-sm font-medium",
+                        nav: "!bg-white space-x-1 flex items-center",
+                        nav_button: "!bg-white !text-gray-600 hover:!bg-gray-100 hover:!text-gray-900 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                      }}
+                    />
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
@@ -202,31 +222,8 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
               ))}
             </div>
 
-            {/* Order Summary */}
-            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
-              <h5 className="font-semibold text-gray-900 mb-3">Order Summary</h5>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="text-gray-900">{formatCurrency(order.subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax:</span>
-                  <span className="text-gray-900">{formatCurrency(order.tax)}</span>
-                </div>
-                <div className="border-t border-emerald-200 pt-2 mt-2">
-                  <div className="flex justify-between text-base font-semibold">
-                    <span className="text-gray-900">Total:</span>
-                    <span className="text-emerald-600">{formatCurrency(order.total)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Details */}
-          <div className="space-y-6">
             {/* Shipping Address */}
+            
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <MapPin className="h-5 w-5 text-emerald-600" />
@@ -254,6 +251,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
               </div>
             </div>
 
+
+          </div>
+
+          {/* Right Column - Details */}
+          <div className="space-y-6">
             {/* Payment Method */}
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -285,6 +287,27 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
                     <span className="text-emerald-600 font-medium">{order.trackingNumber}</span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+              <h5 className="font-semibold text-gray-900 mb-3">Order Summary</h5>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="text-gray-900">{formatCurrency(order.subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Tax:</span>
+                  <span className="text-gray-900">{formatCurrency(order.tax)}</span>
+                </div>
+                <div className="border-t border-emerald-200 pt-2 mt-2">
+                  <div className="flex justify-between text-base font-semibold">
+                    <span className="text-gray-900">Total:</span>
+                    <span className="text-emerald-600">{formatCurrency(order.total)}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -339,17 +362,22 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onStatusUpdate }) => {
               {/* Invoice Actions */}
               <div className="flex gap-3">
                 <Button
-                  variant="outline"
-                  onClick={() => console.log('Download invoice')}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  variant="default"
+                  onClick={() => {
+                    console.log('Download invoice');
+                    // Add your download logic here
+                  }}
+                  className="gap-2 !bg-emerald-600 hover:!bg-emerald-700 !text-white hover:!text-white !border-emerald-600 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!text-white transition-colors duration-200"
                 >
                   <Download className="h-4 w-4" />
                   Download Invoice
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={() => console.log('Email invoice')}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  variant="default"
+                  onClick={() => {
+                    console.log('Email invoice');
+                  }}
+                  className="gap-2 !bg-emerald-600 hover:!bg-emerald-700 !text-white hover:!text-white !border-emerald-600 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!text-white transition-colors duration-200"
                 >
                   <Mail className="h-4 w-4" />
                   Email Invoice

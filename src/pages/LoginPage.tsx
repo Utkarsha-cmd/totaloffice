@@ -29,10 +29,8 @@ const LoginPage = () => {
     } catch (err: any) {
       console.error('Login error:', err);
       
-      // Handle specific error messages from the server
+    
       if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         if (err.response.status === 401) {
           setError('Invalid email or password. Please try again.');
         } else if (err.response.status === 400) {

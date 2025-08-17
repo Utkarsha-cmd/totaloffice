@@ -12,11 +12,11 @@ import { toast } from 'sonner';
 import './LoginPage.css';
 
 interface LoginPageProps {
-  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff', username: string) => void;
+  onLogin: (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' |'sales', username: string) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff'>('customer');
+  const [selectedUserType, setSelectedUserType] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | 'sales'>('customer');
   const [useremail, setUseremail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
@@ -30,78 +30,92 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     [key: string]: any;
 }
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  toast.dismiss();
 
-    toast.dismiss();
+  if (!useremail.trim()) {
+    toast.error('Please enter your email');
+    return;
+  }
 
-    if (!useremail.trim()) {
-      toast.error('Please enter your email');
-      return;
-    }
+  if (!password.trim()) {
+    toast.error('Please enter your password');
+    return;
+  }
 
-    if (!password.trim()) {
-      toast.error('Please enter your password');
-      return;
-    }
+  try {
+    setIsLoading(true);
+    const toastId = toast.loading('Signing in...');
 
-    try {
-      setIsLoading(true);
-      const toastId = toast.loading('Signing in...');
-      
-      // Always try to authenticate with the backend first
-      let response: LoginResponse;
-      try {
-        response = await login(useremail, password);
-        console.log('Login response:', response);
-
-        if (!response) {
-          throw new Error('No response from server');
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        // If login fails, check if it's a technician trying to log in
-        if (selectedUserType === 'technician') {
-          throw new Error('Invalid technician credentials. Please try again.');
-        }
-        throw error; // Re-throw the error if not a technician
-      }
-
-      const roleFromResponse = response.role?.toLowerCase();
-      const allowedRoles = ['customer', 'admin', 'staff', 'technician', 'warehouse_staff'] as const;
-      type AllowedRole = typeof allowedRoles[number];
-
-      // For technician login, ensure the role is set to 'technician' if the backend confirms it
-      const userRole: AllowedRole =
-        roleFromResponse === 'technician' 
-          ? 'technician' 
-          : allowedRoles.includes(roleFromResponse as AllowedRole)
-            ? (roleFromResponse as AllowedRole)
-            : selectedUserType;
-
-      console.log('Determined user role:', userRole);
-
-      onLogin(userRole, useremail);
-
+    // 🚀 MOCK LOGIN for Sales
+    if (useremail.toLowerCase() === 'sales@mail.com') {
+      onLogin('sales', useremail);
       toast.success('Login successful!', { id: toastId });
 
       setTimeout(() => {
-        console.log(`Navigating to /${userRole}`);
-        window.location.href = `/${userRole}`;
+        console.log(`Navigating to /SalesDashboard`);
+        window.location.href = `/SalesDashboard`;
       }, 100);
-    } catch (error: any) {
-      console.error('Login error:', error);
-      const errorMessage = error.message || 'Failed to sign in. Please try again.';
-      toast.error(errorMessage);
-      setPassword('');
-    } finally {
-      setIsLoading(false);
+      return; // Skip backend for sales
     }
-  };
+
+    let response: LoginResponse;
+    try {
+      response = await login(useremail, password);
+      console.log('Login response:', response);
+
+      if (!response) {
+        throw new Error('No response from server');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      if (selectedUserType === 'technician') {
+        throw new Error('Invalid technician credentials. Please try again.');
+      }
+      throw error; 
+    }
+
+    const roleFromResponse = response.role?.toLowerCase();
+    const allowedRoles = [
+      'customer',
+      'admin',
+      'staff',
+      'technician',
+      'warehouse_staff',
+      'sales'
+    ] as const;
+    type AllowedRole = typeof allowedRoles[number];
+
+    const userRole: AllowedRole =
+      roleFromResponse === 'technician'
+        ? 'technician'
+        : allowedRoles.includes(roleFromResponse as AllowedRole)
+        ? (roleFromResponse as AllowedRole)
+        : selectedUserType;
+
+    console.log('Determined user role:', userRole);
+
+    onLogin(userRole, useremail);
+
+    toast.success('Login successful!', { id: toastId });
+
+    setTimeout(() => {
+      console.log(`Navigating to /${userRole}`);
+      window.location.href = `/${userRole}`;
+    }, 100);
+  } catch (error: any) {
+    console.error('Login error:', error);
+    const errorMessage =
+      error.message || 'Failed to sign in. Please try again.';
+    toast.error(errorMessage);
+    setPassword('');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const userTypes = [
     { type: 'customer' as const, label: 'Customer', icon: User, color: 'from-green-50 to-emerald-50' },
@@ -109,6 +123,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     { type: 'staff' as const, label: 'Staff', icon: Users, color: 'from-green-50 to-emerald-50' },
     { type: 'technician' as const, label: 'Technician', icon: Wrench, color: 'from-green-50 to-emerald-50' },
     { type: 'warehouse' as const, label: 'Warehouse Staff', icon: Users, color: 'from-green-50 to-emerald-50' },
+    { type: 'sales' as const, label: ' Sales', icon: Users, color: 'from-green-50 to-emerald-50' },
   ];
 
   return (
@@ -229,26 +244,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-            </div>
-
-            {/* Remember Me + Forgot */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  className="w-4 h-4 text-green-700 border-border rounded focus:ring-green-700"
-                />
-                <label htmlFor="remember" className="text-green-900 dark:text-white">
-                  Remember me
-                </label>
-              </div>
-              <button
-                type="button"
-                className="text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200 font-medium transition-colors"
-              >
-                Forgot password?
-              </button>
             </div>
 
             {/* Submit */}

@@ -770,20 +770,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             Support Tickets
           </div>
         </button>
-
-        <button
-          onClick={() => setActiveTab('agreement')}
-          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-            activeTab === 'agreement'
-              ? 'bg-green-100 text-green-900'
-              : 'hover:bg-green-800 hover:text-white text-green-200'
-          }`}
-        >
-          <FileText className="w-4 h-4 mr-2 mt-0.5" />
-          <div>
-            Service Agreement
-          </div>
-        </button>
       </nav>
 
       {/* Sign Out at Bottom */}
@@ -795,7 +781,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <X className="w-4 h-4" />
             Sign Out
           </button>
-        </div>
+      </div>
     </aside>
  
         {/* Main Content */}

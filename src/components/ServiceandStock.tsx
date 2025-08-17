@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { serviceApi } from '../services/api';
 import { toast } from 'react-toastify';
+import { Edit3, Trash2 } from 'lucide-react';
 
 interface Product {
   _id: string;
@@ -17,8 +18,8 @@ interface Service {
 
 interface NewProduct {
   name: string;
-  stock: number;
-  price: number;
+  stock: number | string;
+  price: number | string;
 }
 
 const ServicesAndStocks = () => {
@@ -35,10 +36,10 @@ const ServicesAndStocks = () => {
   const [showAddProductModal, setShowAddProductModal] = useState<string | null>(null);
   const [newServiceName, setNewServiceName] = useState('');
   const [newProducts, setNewProducts] = useState<NewProduct[]>([
-    { name: '', stock: 0, price: 0 }
+    { name: '', stock: '', price: '' }
   ]);
   const [productsToAdd, setProductsToAdd] = useState<NewProduct[]>([
-    { name: '', stock: 0, price: 0 }
+    { name: '', stock: '', price: '' }
   ]);
 
   // Fetch services on component mount
@@ -92,7 +93,11 @@ const ServicesAndStocks = () => {
       return;
     }
 
-    const validProducts = newProducts.filter(p => p.name.trim());
+    const validProducts = newProducts.filter(p => p.name.trim()).map(p => ({
+      name: p.name,
+      stock: typeof p.stock === 'string' ? (parseInt(p.stock) || 0) : p.stock,
+      price: typeof p.price === 'string' ? (parseFloat(p.price) || 0) : p.price
+    }));
     if (validProducts.length === 0) {
       toast.error('Please add at least one product');
       return;
@@ -107,7 +112,7 @@ const ServicesAndStocks = () => {
       setServices(prev => [...prev, newService]);
       setShowAddModal(false);
       setNewServiceName('');
-      setNewProducts([{ name: '', stock: 0, price: 0 }]);
+      setNewProducts([{ name: '', stock: '', price: '' }]);
       toast.success('Service created successfully');
     } catch (error) {
       console.error('Error creating service:', error);
@@ -116,7 +121,11 @@ const ServicesAndStocks = () => {
   };
 
   const handleAddProductsToService = async (serviceId: string) => {
-    const validProducts = productsToAdd.filter(p => p.name.trim());
+    const validProducts = productsToAdd.filter(p => p.name.trim()).map(p => ({
+      name: p.name,
+      stock: typeof p.stock === 'string' ? (parseInt(p.stock) || 0) : p.stock,
+      price: typeof p.price === 'string' ? (parseFloat(p.price) || 0) : p.price
+    }));
     if (validProducts.length === 0) {
       toast.error('Please add at least one product');
       return;
@@ -134,7 +143,7 @@ const ServicesAndStocks = () => {
       );
 
       setShowAddProductModal(null);
-      setProductsToAdd([{ name: '', stock: 0, price: 0 }]);
+      setProductsToAdd([{ name: '', stock: '', price: '' }]);
       toast.success('Products added successfully');
     } catch (error) {
       console.error('Error adding products:', error);
@@ -229,9 +238,9 @@ const ServicesAndStocks = () => {
           <div className="space-y-4">
             {service.products.map((product) =>
               editingProductId === product._id ? (
-                <div key={product._id} className="w-full border-b pb-3">
+                <div key={product._id} className="w-full border-b border-gray-200 pb-3">
                   <p className="text-sm font-semibold text-gray-800">{product.name}</p>
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:items-end">
                     <div>
                       <label className="text-xs text-gray-600 block">Stock</label>
                       <input
@@ -243,7 +252,7 @@ const ServicesAndStocks = () => {
                             stock: parseInt(e.target.value),
                           })
                         }
-                        className="border px-2 py-1 rounded  border-gray-300 text-sm w-full sm:w-24 text-gray-900 font-medium"
+                        className="border px-2 py-1 rounded border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none text-sm w-full sm:w-24 text-gray-900 font-medium"
                       />
                     </div>
                     <div>
@@ -257,21 +266,21 @@ const ServicesAndStocks = () => {
                             price: parseFloat(e.target.value),
                           })
                         }
-                        className="border px-2 py-1 rounded  border-gray-300 text-sm w-full sm:w-24 text-gray-900 font-medium "
+                        className="border px-2 py-1 rounded border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none text-sm w-full sm:w-24 text-gray-900 font-medium"
                       />
                     </div>
-                    <div className="flex gap-2 mt-2 sm:mt-6">
+                    <div className="flex gap-2">
                       <button
                         onClick={() =>
                           handleSaveEdit(product._id, service._id)
                         }
-                        className="text-sm bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 shadow-sm"
+                        className="text-sm bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => setEditingProductId(null)}
-                        className="text-sm border border-gray-300 px-3 py-1 rounded text-gray-700  hover:bg-gray-100 outline-none focus:outline-none "
+                        className="text-sm border border-gray-300 px-3 py-1 rounded text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300"
                       >
                         Cancel
                       </button>
@@ -279,13 +288,17 @@ const ServicesAndStocks = () => {
                   </div>
                 </div>
               ) : (
-                <div key={product._id} className="flex justify-between items-center pb-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500 border border-gray-300 rounded px-1 
-                   hover:border-emerald-500 focus-within:border-emerald-500 focus-within:ring-emerald-500">
-                      Stock: {product.stock}, Price: £{product.price?.toFixed(2) || '0.00'}
-                    </p>
+                <div key={product._id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 mb-3">{product.name}</p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-medium">
+                        Stock: {product.stock}
+                      </span>
+                      <span className="font-semibold text-gray-900">
+                        £{product.price?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -293,16 +306,35 @@ const ServicesAndStocks = () => {
                         setEditingProductId(product._id);
                         setEditedProduct({ ...product });
                       }}
-                      className="text-sm text-emerald-600 "
+                      className="p-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 rounded-md transition-colors focus:outline-none focus:ring-0"
+                      style={{ backgroundColor: 'transparent' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ecfdf5';
+                        e.currentTarget.style.color = '#047857';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#059669';
+                      }}
+                      title="Edit Product"
                     >
-                      Edit
+                      <Edit3 className="w-4 h-4" />
                     </button>
-                    <span className="text-gray-400">|</span>
                     <button
                       onClick={() => handleDeleteProduct(service._id, product._id)}
-                      className="text-sm text-red-600 "
+                      className="p-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors focus:outline-none focus:ring-0"
+                      style={{ backgroundColor: 'transparent' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fef2f2';
+                        e.currentTarget.style.color = '#dc2626';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#dc2626';
+                      }}
+                      title="Delete Product"
                     >
-                      Delete
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -320,21 +352,21 @@ const ServicesAndStocks = () => {
       <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-lg relative">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New Service & Products</h3>
 
-        <label className="block mb-3">
-          <span className="text-sm font-medium text-gray-700">Service Name</span>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-600 mb-1">Service Name</label>
           <input
             type="text"
-            className="mt-1 block w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
+            className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
             value={newServiceName}
             onChange={(e) => setNewServiceName(e.target.value)}
           />
-        </label>
+        </div>
 
         <div className="space-y-4 max-h-60 overflow-y-auto mb-4">
           {newProducts.map((product, index) => (
-            <div key={index} className="grid grid-cols-3 gap-2 items-end">
+            <div key={index} className="grid grid-cols-3 gap-4 items-start">
               <div>
-                <label className="block text-sm text-gray-600">Product Name</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Product Name</label>
                 <input
                   type="text"
                   value={product.name}
@@ -347,29 +379,27 @@ const ServicesAndStocks = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600">Stock</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Stock</label>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  type="number"
                   value={product.stock}
                   onChange={(e) => {
                     const updated = [...newProducts];
-                    updated[index].stock = parseInt(e.target.value) || 0;
+                    updated[index].stock = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                     setNewProducts(updated);
                   }}
-                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
+                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600">Price (£)</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Price (£)</label>
                 <input
-                  type="text"
+                  type="number"
                   step="0.01"
                   value={product.price}
                   onChange={(e) => {
                     const updated = [...newProducts];
-                    updated[index].price = parseFloat(e.target.value) || 0;
+                    updated[index].price = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
                     setNewProducts(updated);
                   }}
                   className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -383,7 +413,7 @@ const ServicesAndStocks = () => {
           <button
             className="text-sm text-emerald-600 hover:underline"
             onClick={() =>
-              setNewProducts([...newProducts, { name: '', stock: 0, price: 0 }])
+              setNewProducts([...newProducts, { name: '', stock: '', price: '' }])
             }
           >
             + Add Another Product
@@ -417,9 +447,9 @@ const ServicesAndStocks = () => {
 
         <div className="space-y-4 max-h-60 overflow-y-auto mb-4">
           {productsToAdd.map((product, index) => (
-            <div key={index} className="grid grid-cols-3 gap-2 items-end">
+            <div key={index} className="grid grid-cols-3 gap-4 items-start">
               <div>
-                <label className="block text-sm text-gray-600">Product Name</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Product Name</label>
                 <input
                   type="text"
                   value={product.name}
@@ -428,34 +458,34 @@ const ServicesAndStocks = () => {
                     updated[index].name = e.target.value;
                     setProductsToAdd(updated);
                   }}
-                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
+                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600">Stock</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Stock</label>
                 <input
                   type="number"
                   value={product.stock}
                   onChange={(e) => {
                     const updated = [...productsToAdd];
-                    updated[index].stock = parseInt(e.target.value) || 0;
+                    updated[index].stock = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                     setProductsToAdd(updated);
                   }}
-                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
+                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600">Price (£)</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Price (£)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={product.price}
                   onChange={(e) => {
                     const updated = [...productsToAdd];
-                    updated[index].price = parseFloat(e.target.value) || 0;
+                    updated[index].price = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
                     setProductsToAdd(updated);
                   }}
-                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none"
+                  className="w-full border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded px-3 py-2 text-gray-700 outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
@@ -466,7 +496,7 @@ const ServicesAndStocks = () => {
           <button
             className="text-sm text-emerald-600 hover:underline"
             onClick={() =>
-              setProductsToAdd([...productsToAdd, { name: '', stock: 0, price: 0 }])
+              setProductsToAdd([...productsToAdd, { name: '', stock: '', price: '' }])
             }
           >
             + Add Another Product

@@ -15,25 +15,23 @@ import CustomerDetails from "./components/CustomerDetails";
 import WarehouseDashboard from "./components/warehouse";
 import CustomerHistoryPage from "./pages/CustomerHistoryPage";
 import TechnicianDashboard from "./components/TechnicianDasboard";
+import SalesDashboard from "./components/SalesDashboard"; 
 
 const queryClient = new QueryClient();
 
 
 const App = () => {
-  // Initialize state from localStorage if available
-  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | null>(
+  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | 'sales' | null>(
     () => {
       const savedRole = localStorage.getItem('userRole');
-      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | null;
+      return savedRole as 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | 'sales' | null;
     }
   );
   const [username, setUsername] = useState<string>(
     () => localStorage.getItem('username') || ''
   );
 
-  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff', username: string) => {
-    console.log("User logged in:", role, username);
-    // Save to state and localStorage
+  const handleLogin = (role: 'customer' | 'admin' | 'staff' | 'technician' | 'warehouse_staff' | 'sales', username: string) => {
     setUserRole(role);
     setUsername(username);
     localStorage.setItem('userRole', role);
@@ -147,86 +145,59 @@ const App = () => {
   userRole ? <Navigate to={`/${userRole}`} replace /> : <LoginPage onLogin={handleLogin} />
 } />
             <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected routes */}
+
+            {/* Admin */}
             <Route path="/admin" element={
               <ProtectedRoute>
-                {userRole === 'admin' ? (
-                  <AdminDashboard username={username} userType={userRole} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
+                {userRole === 'admin' ? <AdminDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
-            
+
+            {/* Staff */}
             <Route path="/staff" element={
               <ProtectedRoute>
-                {userRole === 'staff' ? (
-                  <StaffDashboard
-                    username={username}
-                    userType="staff"
-                    onLogout={handleLogout}
-                  />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
+                {userRole === 'staff' ? <StaffDashboard username={username} userType="staff" onLogout={handleLogout} /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
-            
+
+            {/* Customer */}
             <Route path="/customer" element={
               <ProtectedRoute>
-                {userRole === 'customer' ? (
-                  <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
+                {userRole === 'customer' ? <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
-            
+
+            {/* Technician */}
+            <Route path="/technician" element={
+              <ProtectedRoute>
+                {userRole === 'technician' ? <TechnicianDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+              </ProtectedRoute>
+            } />
+
+            {/* Warehouse */}
+            <Route path="/warehouse_staff" element={
+              <ProtectedRoute>
+                {userRole === 'warehouse_staff' ? <WarehouseDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+              </ProtectedRoute>
+            } />
+
+            {/* Sales */}
+            <Route path="/sales" element={
+              <ProtectedRoute>
+                {userRole === 'sales' ? <SalesDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+              </ProtectedRoute>
+            } />
+
+            {/* Customer history */}
             <Route path="/customer-history/:customerId" element={
               <ProtectedRoute>
-                {userRole === 'admin' || userRole === 'staff' ? (
-                  <CustomerHistoryPage />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
+                {userRole === 'admin' || userRole === 'staff' ? <CustomerHistoryPage /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
-            <Route path="/warehouse_staff" element={
-  <ProtectedRoute>
-    {userRole === 'warehouse_staff' ? (
-      <WarehouseDashboard
-        username={username}
-        userType={userRole}
-        onLogout={handleLogout}
-      />
-    ) : (
-      <Navigate to="/login" replace />
-    )}
-  </ProtectedRoute>
-} />
-<Route path="/technician" element={
-  <ProtectedRoute>
-    {userRole === 'technician' ? (
-      <TechnicianDashboard
-        username={username}
-        userType={userRole}
-        onLogout={handleLogout}
-      />
-    ) : (
-      <Navigate to="/login" replace />
-    )}
-  </ProtectedRoute>
-} />
-            
+
+            {/* Default */}
             <Route path="/" element={
-              isLoading ? (
-                <div>Loading...</div>
-              ) : userRole ? (
-                <Navigate to={`/${userRole}`} replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              isLoading ? <div>Loading...</div> : userRole ? <Navigate to={`/${userRole}`} replace /> : <Navigate to="/login" replace />
             } />
             
             
