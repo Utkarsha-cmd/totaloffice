@@ -139,7 +139,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   {/* Left Panel */}
   <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden px-12 py-16">
     <div className="relative z-10 flex flex-col justify-center text-green-900 dark:text-white w-full max-w-md mx-auto">
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-start mb-6 w-full">
         <img src={logo} alt="MV Total Office Solutions" className="h-20 w-auto" />
       </div>
       <h1 className="text-4xl font-bold mb-4">Total Office Solutions</h1>

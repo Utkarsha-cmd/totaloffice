@@ -1,421 +1,741 @@
+import type React from "react"
 import { useState } from "react"
+import {
+  FileText,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Clock,
+  DollarSign,
+  Search,
+  Download,
+  Send,
+  AlertCircle,
+  ArrowRight,
+  Handshake,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
+import { generateQuotePdf } from "@/utils/generatePdf"
+import type { Quote, LineItem, Contract } from "@/types/quote"
 
-interface Agreement {
-  id: string
-  name: string
-  content: {
-    title: string
-    terms: string[]
-    termination: string
-    forceMajeure: string
-    acceptance: string
-  }
-  package: {
-    name: string
-    cost: string
-  }
-}
+const QuotesManagement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("pending_review")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
+  const [reviewNotes, setReviewNotes] = useState("")
 
-interface FormData {
-  title: string
-  forename: string
-  surname: string
-  email: string
-  contactNumber: string
-  address1: string
-  address2: string
-  townCity: string
-  postcode: string
-  date: string
-  signature: string
-  printName: string
-}
-
-const agreements: Agreement[] = [
-  {
-    id: "infinity",
-    name: "INFINITY Service Agreement",
-    content: {
-      title: "INFINITY Service Agreement",
-      terms: [
-        "The subscription to Infinity is for a minimum 12-month period from the date of joining, unless paying upfront for 3 years.",
-        "Subscriptions can be paid monthly (12 consecutive payments required annually or every 3 years.)",
-        "A subscription entitles subscribers to a maintained printer with unlimited ink cartridges, for a minimum period of 12 months (or 3 years if paid upfront for 3 years).",
-        "If payment is provided upfront for the first 12 months, we will give you 1 month free. If payment is provided upfront for 3 years, we will give you 6 months free.",
-        "The printer and associated printer cartridges supplied for Infinity, shall remain the property of MY Total Office Solutions at all times.",
-        "The printers supplied to subscribers as part of Infinity may be refurbished.",
-        "If a printer fails for any reason, MY Total Office Solutions should be notified as soon as possible.",
-        "Subscriptions are not transferable to any other parties.",
-        "Subscriptions are only for use by a single household.",
-        "Subscriptions and the printers and printer cartridges are only for home use.",
-        "The printer and associated printer cartridges are not for resale.",
-        "Only printer cartridges supplied by MY Total Office Solutions can be used with Infinity.",
-        "Subscriptions will automatically continue after the 12-month period unless one month's notice to terminate is received.",
-        "Termination will only be accepted with the return of any supplied printer and printer cartridges in complete working order.",
-        "MY Total Office Solutions reserves the right to change subscription pricing at any time.",
-        "MY Total Office Solutions reserves the right to refuse or cancel a subscription.",
+  // Sample quotes data with various statuses
+  const [quotes, setQuotes] = useState<Quote[]>([
+    {
+      id: "Q-001",
+      customerId: "C-001",
+      customerName: "Acme Corporation",
+      quoteNumber: "Q-001",
+      date: "2024-01-15",
+      expiryDate: "2024-02-15",
+      lineItems: [
+        {
+          id: "item-1",
+          description: "Professional Services Consultation",
+          quantity: 10,
+          unitPrice: 150,
+          total: 1500,
+        },
       ],
-      termination:
-        "MY Total Office Solutions reserves the right to terminate a subscription at its sole discretion during the term of a subscription. If a payment is missed the subscription is frozen and no replacement printer cartridges will be permitted while frozen.",
-      forceMajeure:
-        "Neither party will be liable for any delay in performing or failure to perform its obligations under this Agreement due to any cause outside its reasonable control.",
-      acceptance:
-        'By ticking the "Agree to the terms & conditions" and applying to join Infinity, you hereby confirm and accept that you shall not hold MY Total Office Solutions responsible for any damage howsoever caused.',
+      subtotal: 1500,
+      taxRate: 8.5,
+      taxAmount: 127.5,
+      total: 1627.5,
+      terms: "Payment due within 30 days of invoice date.",
+      notes: "Initial consultation package",
+      status: "sent",
+      salesRep: "John Smith",
     },
-    package: {
-      name: "INFINITY – MONTHLY SUBSCRIPTION",
-      cost: "£11.99 PER MONTH",
-    },
-  },
-  {
-    id: "premium",
-    name: "PREMIUM Service Agreement",
-    content: {
-      title: "PREMIUM Service Agreement",
-      terms: [
-        "The subscription to Premium is for a minimum 24-month period from the date of joining.",
-        "Subscriptions include premium printer maintenance and high-capacity ink cartridges.",
-        "Premium subscribers receive priority technical support and same-day replacement service.",
-        "All equipment remains the property of MY Total Office Solutions.",
-        "Premium service includes quarterly maintenance visits.",
-        "Subscriptions are non-transferable and for single business use only.",
-        "Commercial usage is permitted under Premium agreements.",
-        "Premium subscribers receive advanced reporting and usage analytics.",
-        "Automatic renewal applies unless 60 days notice is provided.",
-        "Premium agreements include damage protection coverage.",
+    {
+      id: "Q-002",
+      customerId: "C-002",
+      customerName: "Tech Solutions Inc",
+      quoteNumber: "Q-002",
+      date: "2024-01-14",
+      expiryDate: "2024-02-14",
+      lineItems: [
+        {
+          id: "item-2",
+          description: "Software Development Package",
+          quantity: 1,
+          unitPrice: 5000,
+          total: 5000,
+        },
       ],
-      termination:
-        "Premium subscriptions require 60 days written notice for termination. Early termination fees may apply for contracts terminated before the minimum term.",
-      forceMajeure:
-        "Neither party will be liable for delays due to circumstances beyond reasonable control, including but not limited to natural disasters, government actions, or supply chain disruptions.",
-      acceptance:
-        "By signing this Premium Service Agreement, you acknowledge understanding of all terms and agree to the enhanced service level commitments.",
+      subtotal: 5000,
+      taxRate: 8.5,
+      taxAmount: 425,
+      total: 5425,
+      terms: "50% upfront, 50% on completion",
+      notes: "Custom software solution",
+      status: "under_review",
+      salesRep: "Sarah Johnson",
     },
-    package: {
-      name: "PREMIUM – BUSINESS SUBSCRIPTION",
-      cost: "£29.99 PER MONTH",
-    },
-  },
-  {
-    id: "enterprise",
-    name: "ENTERPRISE Service Agreement",
-    content: {
-      title: "ENTERPRISE Service Agreement",
-      terms: [
-        "Enterprise agreements are customized for large-scale operations with flexible terms.",
-        "Multi-location support with centralized billing and management.",
-        "Dedicated account manager and 24/7 technical support included.",
-        "Volume-based pricing with quarterly usage reviews.",
-        "Enterprise-grade security and compliance features included.",
-        "Custom SLA agreements with guaranteed response times.",
-        "Integration support for existing IT infrastructure.",
-        "Quarterly business reviews and optimization consultations.",
-        "Flexible contract terms from 12 to 60 months available.",
-        "White-label options available for reseller partners.",
+    {
+      id: "Q-003",
+      customerId: "C-003",
+      customerName: "Global Enterprises",
+      quoteNumber: "Q-003",
+      date: "2024-01-13",
+      expiryDate: "2024-02-13",
+      lineItems: [
+        {
+          id: "item-3",
+          description: "Marketing Campaign Setup",
+          quantity: 1,
+          unitPrice: 2500,
+          total: 2500,
+        },
       ],
-      termination:
-        "Enterprise agreements include custom termination clauses negotiated during contract setup. Standard notice period is 90 days with potential early termination fees.",
-      forceMajeure:
-        "Enterprise force majeure clauses include additional provisions for business continuity and disaster recovery scenarios.",
-      acceptance:
-        "Enterprise agreements require executive sign-off and legal review. By signing, authorized representatives confirm organizational commitment to the service terms.",
+      subtotal: 2500,
+      taxRate: 8.5,
+      taxAmount: 212.5,
+      total: 2712.5,
+      terms: "Payment due within 15 days",
+      notes: "Q1 campaign setup",
+      status: "approved",
+      salesRep: "Mike Brown",
     },
-    package: {
-      name: "ENTERPRISE – CUSTOM SUBSCRIPTION",
-      cost: "CUSTOM PRICING",
+    {
+      id: "Q-004",
+      customerId: "C-004",
+      customerName: "StartupCo",
+      quoteNumber: "Q-004",
+      date: "2024-01-12",
+      expiryDate: "2024-02-12",
+      lineItems: [
+        {
+          id: "item-4",
+          description: "Website Development",
+          quantity: 1,
+          unitPrice: 3500,
+          total: 3500,
+        },
+      ],
+      subtotal: 3500,
+      taxRate: 8.5,
+      taxAmount: 297.5,
+      total: 3797.5,
+      terms: "Payment due within 30 days",
+      notes: "Modern responsive website",
+      status: "under_review",
+      salesRep: "Lisa Davis",
     },
-  },
-]
+  ])
 
-function Quote() {
-  const [selectedAgreement, setSelectedAgreement] = useState<Agreement | null>(null)
-  const [currentPage, setCurrentPage] = useState<"selection" | "customer" | "company">("selection")
-  const [formData, setFormData] = useState<FormData>({
-    title: "",
-    forename: "",
-    surname: "",
-    email: "",
-    contactNumber: "",
-    address1: "",
-    address2: "",
-    townCity: "",
-    postcode: "",
-    date: new Date().toISOString().split("T")[0],
-    signature: "",
-    printName: "",
-  })
-  const { toast } = useToast()
+  const [contracts, setContracts] = useState<Contract[]>([
+    {
+      id: "C-001",
+      quoteId: "Q-001", // Changed from Q-005 to Q-001 which exists in our sample data
+      contractNumber: "CON-001",
+      customerName: "Acme Corporation", // Updated to match the customer name from Q-001
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+      value: 1627.5, // Updated to match the total from Q-001
+      status: "active",
+      signedDate: "2023-12-28",
+    },
+  ])
 
-  const handleAgreementSelect = (agreement: Agreement) => {
-    setSelectedAgreement(agreement)
-    setCurrentPage("customer")
-  }
-
-  const handleFormChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSend = () => {
-    const requiredFields = [
-      "title",
-      "forename",
-      "surname",
-      "email",
-      "contactNumber",
-      "address1",
-      "townCity",
-      "postcode",
-      "signature",
-      "printName",
-    ]
-    const missingFields = requiredFields.filter((field) => !formData[field as keyof FormData])
-    if (missingFields.length > 0) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields before sending.",
-        variant: "destructive",
-      })
-      return
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      draft: "outline",
+      pending: "secondary",
+      sent: "default",
+      approved: "default",
+      rejected: "destructive",
+      under_review: "secondary",
+      active_contract: "outline",
     }
 
-    toast({
-      title: "Agreement Sent",
-      description: `Agreement sent successfully to ${formData.forename} ${formData.surname} at ${formData.email}`,
-    })
+    const icons: Record<string, React.ReactNode> = {
+      draft: <FileText size={12} className="mr-1" />,
+      pending: <Clock size={12} className="mr-1" />,
+      sent: <Send size={12} className="mr-1 text-emerald-600" />,
+      approved: <CheckCircle size={12} className="mr-1" />,
+      rejected: <XCircle size={12} className="mr-1" />,
+      under_review: <Eye size={12} className="mr-1" />,
+      active_contract: <Handshake size={12} className="mr-1" />,
+    }
 
-    setCurrentPage("selection")
-    setSelectedAgreement(null)
-    setFormData({
-      title: "",
-      forename: "",
-      surname: "",
-      email: "",
-      contactNumber: "",
-      address1: "",
-      address2: "",
-      townCity: "",
-      postcode: "",
-      date: new Date().toISOString().split("T")[0],
-      signature: "",
-      printName: "",
-    })
+    const displayText = status === 'sent' ? 'Sent' : status?.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    
+    return (
+      <Badge 
+        variant={status === 'active_contract' ? 'outline' : variants[status]}
+        className={`text-xs ${status === 'sent' ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200' : ''} ${status === 'active_contract' ? '!bg-emerald-50 !text-emerald-700 !border-emerald-200 hover:!bg-emerald-100' : ''}`}
+      >
+        {icons[status]}
+        {displayText}
+      </Badge>
+    )
   }
 
-  return (
-    <div className="container mx-auto p-6 bg-white text-black min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        {currentPage === "selection" && (
-          <>
-            <h1 className="text-3xl font-bold text-center mb-8">Select Service Agreement</h1>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {agreements.map((agreement) => (
-                <Card key={agreement.id} className="cursor-pointer hover:shadow-lg transition-shadow bg-emerald-50 border border-emerald-200 hover:border-emerald-300">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-gray-800">{agreement.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 mb-2">Package: {agreement.package.name}</p>
-                    <p className="text-lg text-emerald-600 font-semibold mb-4">{agreement.package.cost}</p>
-                    <Button onClick={() => handleAgreementSelect(agreement)} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white">
-                      Select Agreement
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </>
-        )}
+ 
 
-        {currentPage !== "selection" && selectedAgreement && (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <Button
-               className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-               onClick={() => setCurrentPage("selection")}>
-                ← Back to Selection
-              </Button>
+  const handleQuoteAction = (quoteId: string, action: "approve" | "reject" | "request_changes") => {
+    setQuotes(
+      quotes.map((quote) => {
+        if (quote.id === quoteId) {
+          let newStatus: Quote["status"]
+          switch (action) {
+            case "approve":
+              newStatus = "approved"
+              break
+            case "reject":
+              newStatus = "rejected"
+              break
+            case "request_changes":
+              newStatus = "draft"
+              break
+            default:
+              newStatus = quote.status
+          }
+          return {
+            ...quote,
+            status: newStatus,
+            reviewNotes: reviewNotes || quote.reviewNotes,
+          }
+        }
+        return quote
+      }),
+    )
+
+    toast.success(
+      `Quote ${action === "approve" ? "approved" : action === "reject" ? "rejected" : "sent back for changes"} successfully!`,
+    )
+    setSelectedQuote(null)
+    setReviewNotes("")
+  }
+
+  const convertToContract = (quoteId: string) => {
+    const quote = quotes.find((q) => q.id === quoteId)
+    if (!quote) return
+
+    const newContract: Contract = {
+      id: `C-${String(contracts.length + 2).padStart(3, "0")}`,
+      quoteId: quote.id,
+      contractNumber: `CON-${String(contracts.length + 2).padStart(3, "0")}`,
+      customerName: quote.customerName,
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      value: quote.total,
+      status: "active",
+      signedDate: new Date().toISOString().split("T")[0],
+    }
+
+    setContracts([...contracts, newContract])
+
+    // Update quote status to active_contract
+    setQuotes(quotes.map((q) => (q.id === quoteId ? { ...q, status: "active_contract" as Quote["status"] } : q)))
+
+    toast.success("Quote converted to active contract successfully!")
+  }
+
+  const filteredQuotes = quotes.filter((quote) => {
+    const matchesStatus = statusFilter === "all" || quote.status === statusFilter
+    const matchesSearch =
+      quote.quoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quote.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (quote.salesRep && quote.salesRep.toLowerCase().includes(searchTerm.toLowerCase()))
+    return matchesStatus && matchesSearch
+  })
+
+  const pendingReviewQuotes = filteredQuotes.filter((q) => q.status === "under_review" || q.status === "sent")
+  const approvedQuotes = filteredQuotes.filter((q) => q.status === "approved")
+  const activeContracts = contracts.filter((c) => c.status === "active")
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Quote Management</h1>
+          <p className="text-gray-600 mt-1">Review sales quotes and manage contract conversions</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center text-white shadow-lg mr-4">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-600">Pending Review</div>
+                  <div className="text-2xl font-bold text-gray-800">{pendingReviewQuotes.length}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white shadow-lg mr-4">
+                  <CheckCircle size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-600">Approved</div>
+                  <div className="text-2xl font-bold text-gray-800">{approvedQuotes.length}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg mr-4">
+                  <Handshake size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-600">Active Contracts</div>
+                  <div className="text-2xl font-bold text-gray-800">{activeContracts.length}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg mr-4">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-600">Total Value</div>
+                  <div className="text-2xl font-bold text-gray-800">
+                    ${quotes.reduce((sum, q) => sum + (q.total || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex space-x-1 mb-6 bg-white/50 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveTab("pending_review")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              activeTab === "pending_review" ? "bg-white text-blue-600 shadow-md" : "text-gray-600 hover:text-blue-600"
+            }`}
+          >
+            Pending Review ({pendingReviewQuotes.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("approved")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              activeTab === "approved" ? "bg-white text-blue-600 shadow-md" : "text-gray-600 hover:text-blue-600"
+            }`}
+          >
+            Approved ({approvedQuotes.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("contracts")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              activeTab === "contracts" ? "bg-white text-blue-600 shadow-md" : "text-gray-600 hover:text-blue-600"
+            }`}
+          >
+            Active Contracts ({activeContracts.length})
+          </button>
+        </div>
+
+        {/* Filters */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-white border-gray-300"
+                  />
+                </div>
+              </div>
               <div className="flex gap-2">
-                <Button
-                  className={`border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    currentPage === "customer" 
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
-                      : "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 hover:text-emerald-800"
-                  }`}
-                  onClick={() => setCurrentPage("customer")}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  Customer Copy
-                </Button>
-                <Button
-                  className={`border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    currentPage === "company" 
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
-                      : "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 hover:text-emerald-800"
-                  }`}
-                  onClick={() => setCurrentPage("company")}
-                >
-                  Company Copy
-                </Button>
+                  <option value="all">All Status</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="sent">Sent</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="active_contract">Active Contract</option>
+                </select>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <Card className="bg-white border border-gray-200">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold text-gray-800">{selectedAgreement.content.title}</CardTitle>
-                <p className="text-sm text-gray-500">
-                  {currentPage === "customer" ? "Customer Copy" : "Company Copy - Please retain signed copy"}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
+        {/* Content based on active tab */}
+        {activeTab === "pending_review" && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-800">
+                <Clock size={20} className="text-emerald-500" />
+                Quotes Pending Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {pendingReviewQuotes.length > 0 ? (
                 <div className="space-y-4">
+                  {pendingReviewQuotes.map((quote) => (
+                    <div
+                      key={quote.id}
+                      className="p-6 bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <div className="font-semibold text-gray-800 text-lg">Quote #{quote.quoteNumber}</div>
+                            <div className="text-sm text-gray-600">{quote.customerName}</div>
+                            <div className="text-sm text-gray-500">Sales Rep: {quote.salesRep}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-xl text-gray-800">${quote.total?.toLocaleString()}</div>
+                          <div className="text-sm text-gray-600">{quote.date}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-600">Expires: {quote.expiryDate}</div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedQuote(quote)}
+                            className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          >
+                            <Eye size={14} className="mr-1" />
+                            Review
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuoteAction(quote.id, "approve")}
+                            className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                          >
+                            <CheckCircle size={14} className="mr-1" />
+                            Quick Approve
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Clock size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">No quotes pending review</p>
+                  <p className="text-sm">All quotes have been processed</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "approved" && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-800">
+                <CheckCircle size={20} className="text-green-500" />
+                Approved Quotes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {approvedQuotes.length > 0 ? (
+                <div className="space-y-4">
+                  {approvedQuotes.map((quote) => (
+                    <div
+                      key={quote.id}
+                      className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <div className="font-semibold text-gray-800 text-lg">Quote #{quote.quoteNumber}</div>
+                            <div className="text-sm text-gray-600">{quote.customerName}</div>
+                            <div className="text-sm text-gray-500">Sales Rep: {quote.salesRep}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-xl text-gray-800">${quote.total?.toLocaleString()}</div>
+                          <div className="text-sm text-gray-600">{quote.date}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-600">Ready for contract conversion</div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          >
+                            <Download size={14} className="mr-1" />
+                            Download
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => convertToContract(quote.id)}
+                            className="bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
+                          >
+                            <ArrowRight size={14} className="mr-1" />
+                            Convert to Contract
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <CheckCircle size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">No approved quotes</p>
+                  <p className="text-sm">Approved quotes will appear here</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "contracts" && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-800">
+                <Handshake size={20} className="text-blue-500" />
+                Active Contracts
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {activeContracts.length > 0 ? (
+                <div className="space-y-4">
+                  {activeContracts.map((contract) => (
+                    <div
+                      key={contract.id}
+                      className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <div className="font-semibold text-gray-800 text-lg">
+                              Contract #{contract.contractNumber}
+                            </div>
+                            <div className="text-sm text-gray-600">{contract.customerName}</div>
+                            <div className="text-sm text-gray-500">From Quote: {contract.quoteId}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-xl text-gray-800">${contract.value?.toLocaleString()}</div>
+                          <div className="text-sm text-gray-600">Signed: {contract.signedDate}</div>
+                          <Badge className="mt-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                            <Handshake size={12} className="mr-1 text-emerald-600" />
+                            Active
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-600">
+                          Duration: {contract.startDate} to {contract.endDate}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                            onClick={() => {
+                              const quote = quotes.find(q => q.id === contract.quoteId);
+                              if (quote) {
+                                console.log('Generating PDF for quote:', quote);
+                                generateQuotePdf(quote);
+                              } else {
+                                console.error('Could not find quote for contract:', contract);
+                                toast.error("Could not find the original quote details");
+                              }
+                            }}
+                          >
+                            <Download size={14} className="mr-1" />
+                            Download Contract
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Handshake size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">No active contracts</p>
+                  <p className="text-sm">Converted contracts will appear here</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quote Review Modal */}
+        {selectedQuote && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-800">Review Quote #{selectedQuote.quoteNumber}</h2>
+                  <button
+                    onClick={() => setSelectedQuote(null)}
+                    className="p-1.5 rounded-full text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors duration-200"
+                  >
+                    <XCircle size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Quote Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="font-semibold mb-2 text-gray-600">Terms & Conditions</h3>
-                    <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
-                      {selectedAgreement.content.terms.map((term, index) => (
-                        <li key={index}>{term}</li>
-                      ))}
-                    </ol>
+                    <h3 className="font-semibold text-gray-800 mb-3">Customer Information</h3>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium text-gray-800">Company:</span> <span className="text-gray-700">{selectedQuote.customerName}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-800">Sales Rep:</span> <span className="text-gray-700">{selectedQuote.salesRep}</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold mb-2 text-gray-800">Subscription Termination Policy</h3>
-                    <p className="text-sm text-gray-600">{selectedAgreement.content.termination}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2 text-gray-800">Force Majeure</h3>
-                    <p className="text-sm text-gray-600">{selectedAgreement.content.forceMajeure}</p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2  text-gray-800">Acceptance of Terms and Conditions</h3>
-                    <p className="text-sm  text-gray-600">{selectedAgreement.content.acceptance}</p>
+                    <h3 className="font-semibold text-gray-800 mb-3">Quote Details</h3>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium text-gray-800">Date:</span> <span className="text-gray-700">{selectedQuote.date}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-800">Expires:</span> <span className="text-gray-700">{selectedQuote.expiryDate}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-800">Status:</span> {getStatusBadge(selectedQuote.status)}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="border-t pt-6">
-                  <p className="text-sm font-medium mb-4  text-gray-800">
-                    BY SIGNING BELOW, YOU AGREE TO PURCHASE THE MANAGED PRINT SERVICES SPECIFIED ABOVE.
-                  </p>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Title *</Label>
-                      <Select value={formData.title} onValueChange={(value) => handleFormChange("title", value)}>
-                        <SelectTrigger className="border border-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-white">
-                          <SelectValue placeholder="Select title" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-emerald-300">
-                          <SelectItem className="text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-100 focus:text-emerald-800" value="Mr">Mr</SelectItem>
-                          <SelectItem className="text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-100 focus:text-emerald-800" value="Mrs">Mrs</SelectItem>
-                          <SelectItem className="text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-100 focus:text-emerald-800" value="Miss">Miss</SelectItem>
-                          <SelectItem className="text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-100 focus:text-emerald-800" value="Ms">Ms</SelectItem>
-                          <SelectItem className="text-gray-800 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-100 focus:text-emerald-800" value="Dr">Dr</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Forename *</Label>
-                      <Input  className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      value={formData.forename} onChange={(e) => handleFormChange("forename", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Surname *</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      value={formData.surname} onChange={(e) => handleFormChange("surname", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Email *</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      type="email" value={formData.email} onChange={(e) => handleFormChange("email", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Contact Number *</Label>
-                      <Input  className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      value={formData.contactNumber} onChange={(e) => handleFormChange("contactNumber", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">1st Line Address *</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                       value={formData.address1} onChange={(e) => handleFormChange("address1", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">2nd Line Address</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                       value={formData.address2} onChange={(e) => handleFormChange("address2", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Town/City *</Label>
-                      <Input  className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white" 
-                      value={formData.townCity} onChange={(e) => handleFormChange("townCity", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Postcode *</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white "
-                       value={formData.postcode} onChange={(e) => handleFormChange("postcode", e.target.value)} />
-                    </div>
-
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Date</Label>
-                      <Input className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      type="date" value={formData.date} onChange={(e) => handleFormChange("date", e.target.value)} />
+                {/* Line Items */}
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-3">Line Items</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    {selectedQuote.lineItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0"
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{item.description}</div>
+                          <div className="text-sm text-gray-600">
+                            Qty: {item.quantity} × ${item.unitPrice}
+                          </div>
+                        </div>
+                        <div className="font-semibold text-gray-800">${item.total.toFixed(2)}</div>
+                      </div>
+                    ))}
+                    <div className="mt-4 pt-4 border-t border-gray-300">
+                      <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-800">Subtotal:</span>
+                        <span className="text-gray-700">${selectedQuote.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-800">Tax ({selectedQuote.taxRate}%):</span>
+                        <span className="text-gray-700">${selectedQuote.taxAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-lg font-bold mt-2 border-t border-gray-300 pt-2">
+                        <span className="text-gray-800">Total:</span>
+                        <span className="text-gray-800 font-semibold">${selectedQuote.total.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="mt-4 p-4 bg-muted rounded-lg bg-white  border border-black">
-                    <p className="font-medium text-gray-900 bg-white">{selectedAgreement.package.name}</p>
-                    <p className="text-lg text-gray-900 font-bold text-primary bg-white">{selectedAgreement.package.cost}</p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 mt-4">
-                    <div>
-                      <Label  className="text-gray-900 font-semibold">Signed *</Label>
-                      <Textarea   className="p-2 border border-black  focus:outline-none font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      value={formData.signature} onChange={(e) => handleFormChange("signature", e.target.value)} rows={3} />
-                    </div>
-
-                    <div>
-                      <Label className="text-gray-900 font-semibold">Print Name *</Label>
-                      <Input value={formData.printName}
-                       className="p-2 border border-black font-semibold text-gray-800 rounded bg-white autofill:bg-white"
-                      onChange={(e) => handleFormChange("printName", e.target.value)} />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t">
-                    <div className="text-sm text-muted-foreground mb-4">
-                      <p className="font-medium">MY Total Office Solutions</p>tfd
-                      <p>Unit 6 The Courtyard, Grane Road, Haslingden, LANCS, BB4 4QN</p>
-                      <p>t: 0800 1833 800 | e: info@mytotalofficesolutions.com</p>
-                      <p>w: https://mytotalofficesolutions.co.uk</p>
-                    </div>
-
-                    <Button onClick={handleSend} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="lg">
-                      Send Agreement to Customer
-                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </>
+
+                {/* Terms and Notes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Terms & Conditions</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-800 border border-gray-200">{selectedQuote.terms}</div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Internal Notes</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-800 border border-gray-200">
+                      <span className="text-gray-700">{selectedQuote.notes || "No internal notes"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Review Notes */}
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-3">Review Notes</h3>
+                  <textarea
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    placeholder="Add your review notes here..."
+                    className="w-full p-3 rounded-lg border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none h-24"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleQuoteAction(selectedQuote.id, "request_changes")}
+                    className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  >
+                    <AlertCircle size={16} className="mr-2" />
+                    Request Changes
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleQuoteAction(selectedQuote.id, "reject")}
+                    className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                  >
+                    <XCircle size={16} className="mr-2" />
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={() => handleQuoteAction(selectedQuote.id, "approve")}
+                    className="bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
+                  >
+                    <CheckCircle size={16} className="mr-2" />
+                    Approve Quote
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-export default Quote
+export default QuotesManagement

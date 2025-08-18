@@ -12,7 +12,7 @@ Package,Calendar,FileText,HeadphonesIcon, Box, CalendarDays } from 'lucide-react
 import axios from 'axios';
 import { authService } from '@/services/authService';
 import { supportTicketApi } from '@/services/api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import ActiveContract from './ActiveContract';
 import { DeliveryCalendar, type Delivery } from "./DeliveryCalendar";
 import { OrdersTab } from "./OrderTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -124,7 +124,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<File[]>([]);
-  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders' |'agreement'| 'support'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'deliveries' | 'orders' |'activecontract'| 'support'>('profile');
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: username,
     email: '',
@@ -459,7 +459,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     { id: 'orders', label: 'Place Order', icon: Package },
     { id: 'deliveries', label: 'Deliveries', icon: Calendar},
     { id: 'support', label: 'Support Center', icon: HeadphonesIcon },
-    { id: 'agreement', label: 'Service Agreement', icon: FileText},
+    { id: 'activecontract', label: 'Active Contract', icon: FileText},
   ];
 
   const getStatusBadgeVariant = (status: SupportTicket['status']) => {
@@ -704,90 +704,95 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#f3fdf7] text-gray-800">
-      <div className="grid grid-cols-[260px_1fr] min-h-screen">
-       <aside className="bg-[#0d3324] text-white px-6 py-8 space-y-8 min-h-screen shadow-md border-r border-green-800 flex flex-col">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-wide">Customer Portal</h1>
-        <p className="text-sm text-green-200 mt-1">{username}</p>
-      </div>
+    <div className="min-h-screen bg-[#f3fdf7] text-gray-800 flex overflow-hidden">
+      <aside className="bg-[#0d3324] text-white px-4 py-4 w-64 h-screen flex flex-col shadow-md border-r border-green-800 flex-shrink-0 fixed left-0 top-0">
+        {/* Header */}
+        <div className="flex-shrink-0">
+          <h1 className="text-2xl font-bold text-white tracking-wide">Customer Portal</h1>
+          <p className="text-sm text-green-200 mt-1">{username}</p>
+        </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-col gap-1 flex-1 overflow-y-auto mt-8">
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-            activeTab === 'profile'
-              ? 'bg-green-100 text-green-900'
-              : 'hover:bg-green-800 hover:text-white text-green-200'
-          }`}
-        >
-          <User className="w-4 h-4 mr-2 mt-0.5" />
-          <div>
-            Profile Overview
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-1">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex items-start w-full px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+                activeTab === 'profile'
+                  ? 'bg-green-100 text-green-900'
+                  : 'hover:bg-green-800 hover:text-white text-green-200'
+              }`}
+            >
+              <User className="w-4 h-4 mr-2 mt-0.5" />
+              <div>Profile Overview</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`flex items-start w-full px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+                activeTab === 'orders'
+                  ? 'bg-green-100 text-green-900'
+                  : 'hover:bg-green-800 hover:text-white text-green-200'
+              }`}
+            >
+              <Package className="w-4 h-4 mr-2 mt-0.5" />
+              <div>Place Order</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('deliveries')}
+              className={`flex items-start w-full px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+                activeTab === 'deliveries'
+                  ? 'bg-green-100 text-green-900'
+                  : 'hover:bg-green-800 hover:text-white text-green-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4 mr-2 mt-0.5" />
+              <div>Deliveries</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('activecontract')}
+              className={`flex items-start w-full px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+                activeTab === 'activecontract'
+                  ? 'bg-green-100 text-green-900'
+                  : 'hover:bg-green-800 hover:text-white text-green-200'
+              }`}
+            >
+              <Calendar className="w-4 h-4 mr-2 mt-0.5" />
+              <div>Active Contract</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`flex items-start w-full px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
+                activeTab === 'support'
+                  ? 'bg-green-100 text-green-900'
+                  : 'hover:bg-green-800 hover:text-white text-green-200'
+              }`}
+            >
+              <Ticket className="w-4 h-4 mr-2 mt-0.5" />
+              <div>Support Tickets</div>
+            </button>
           </div>
-        </button>
+        </nav>
 
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-            activeTab === 'orders'
-              ? 'bg-green-100 text-green-900'
-              : 'hover:bg-green-800 hover:text-white text-green-200'
-          }`}
-        >
-          <Package className="w-4 h-4 mr-2 mt-0.5" />
-          <div>
-            Place Order
-          </div>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('deliveries')}
-          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-            activeTab === 'deliveries'
-              ? 'bg-green-100 text-green-900'
-              : 'hover:bg-green-800 hover:text-white text-green-200'
-          }`}
-        >
-          <Calendar className="w-4 h-4 mr-2 mt-0.5" />
-          <div>
-            Deliveries
-          </div>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('support')}
-          className={`flex items-start px-4 py-3 rounded-md text-sm font-medium transition duration-200 ${
-            activeTab === 'support'
-              ? 'bg-green-100 text-green-900'
-              : 'hover:bg-green-800 hover:text-white text-green-200'
-          }`}
-        >
-          <Ticket className="w-4 h-4 mr-2 mt-0.5" />
-          <div>
-            Support Tickets
-          </div>
-        </button>
-      </nav>
-
-      {/* Sign Out at Bottom */}
-      <div className="sticky bottom-0 bg-[#0d3324] border-t border-green-800 p-4">
+        {/* Sign Out Button - Fixed at Bottom */}
+        <div className="border-t border-green-800 pt-2 pb-2">
           <button
             onClick={onLogout}
-            className="flex items-center gap-2 text-sm font-medium hover:text-red-400 transition"
+            className="w-full flex items-center justify-center gap-2 text-sm font-medium text-white hover:bg-green-800/80 transition-colors py-2 px-4 rounded-md"
           >
-            <X className="w-4 h-4" />
+            <LogOut className="w-4 h-4" />
             Sign Out
           </button>
-      </div>
+        </div>
     </aside>
- 
-        {/* Main Content */}
-        <main className="space-y-6">
+      
+    {/* Main Content */}
+    <main className="flex-1 p-6 pl-8 pr-8 overflow-auto ml-64">
+      <div className="max-w-5xl mx-auto">
   {activeTab === 'support' ? (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-700">Support Tickets</h1>
@@ -818,7 +823,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   id="ticketTitle"
                   value={ticketForm.title}
                   onChange={(e) => setTicketForm(prev => ({ ...prev, title: e.target.value }))}
-                  className="bg-white border-emerald-100 focus:border-emerald-200 text-gray-700"
+                  className="bg-white border-gray-200 focus:border-gray-300 focus:ring-0 text-gray-700"
                 />
               </div>
 
@@ -831,15 +836,15 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     setTicketForm(prev => ({ ...prev, category: value }))
                   }
                 >
-                  <SelectTrigger className="bg-white border-emerald-100 text-gray-700">
+                  <SelectTrigger className="bg-white border-emerald-100 text-gray-700 hover:bg-emerald-50">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technical" className="bg-white text-gray-700">Technical Issue</SelectItem>
-                    <SelectItem value="billing" className="bg-white text-gray-700">Billing Question</SelectItem>
-                    <SelectItem value="account" className="bg-white text-gray-700">Account Help</SelectItem>
-                    <SelectItem value="service" className="bg-white text-gray-700">Service Request</SelectItem>
-                    <SelectItem value="other" className="bg-white text-gray-700">Other</SelectItem>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="technical" className="hover:bg-emerald-50 text-gray-700">Technical Issue</SelectItem>
+                    <SelectItem value="billing" className="hover:bg-emerald-50 text-gray-700">Billing Question</SelectItem>
+                    <SelectItem value="account" className="hover:bg-emerald-50 text-gray-700">Account Help</SelectItem>
+                    <SelectItem value="service" className="hover:bg-emerald-50 text-gray-700">Service Request</SelectItem>
+                    <SelectItem value="other" className="hover:bg-emerald-50 text-gray-700">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -854,7 +859,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   id="ticketDescription"
                   value={ticketForm.description}
                   onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-white border-emerald-100 focus:border-emerald-200 min-h-[120px] text-gray-700"
+                  className="bg-white border-gray-200 focus:border-gray-300 focus:ring-0 min-h-[120px] text-gray-700"
                 />
               </div>
 
@@ -867,7 +872,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   multiple
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   onChange={handleTicketAttachmentChange}
-                  className="bg-white border-emerald-100 text-gray-700"
+                  className="bg-white border-gray-200 focus:border-gray-300 focus:ring-0 text-gray-700"
                 />
                 {ticketAttachments.length > 0 && (
                   <ul className="text-sm text-gray-500 mt-2 list-disc pl-5">
@@ -899,8 +904,12 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   });
                   setTicketAttachments([]);
                 }}
-                variant="outline"
-                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                style={{
+                  backgroundColor: '#ecfdf5',
+                  color: '#059669',
+                  borderColor: '#059669'
+                }}
+                className="hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-600"
               >
                 Cancel
               </Button>
@@ -1025,13 +1034,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     </div>
   ) :
            activeTab === 'orders' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="space-y-4">
               <h1 className="text-3xl font-bold text-gray-700">Place a New Order</h1>
               <OrdersTab customerInfo={customerInfo} />
             </div>
             
           ) : activeTab === 'profile' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="space-y-4">
               {/* Error message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-3 text-red-700">
@@ -1122,8 +1131,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       </Button>
                       <Button
                         onClick={handleCancel}
-                        variant="outline"
-                        className="border-gray-200 text-gray-500"
+                        className="bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
                       >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
@@ -1144,7 +1152,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           id="name"
                           value={editedInfo.name}
                           onChange={(e) => updateField('name', e.target.value)}
-                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black placeholder-gray-300"
+                          placeholder="Enter full name"
                         />
                       ) : (
                         <p className="p-2 bg-gray-25 rounded-md text-black">{customerInfo.name}</p>
@@ -1163,7 +1172,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           type="email"
                           value={editedInfo.email}
                           onChange={(e) => updateField('email', e.target.value)}
-                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black placeholder-gray-300"
                           disabled
                         />
                       ) : (
@@ -1186,7 +1195,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                               setUserProfile({ ...userProfile, company: e.target.value });
                             }
                           }}
-                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black placeholder-gray-300"
                           placeholder="Enter company name"
                         />
                       ) : (
@@ -1207,7 +1216,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           id="phone"
                           value={editedInfo.phone}
                           onChange={(e) => updateField('phone', e.target.value)}
-                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black"
+                          className="bg-white/80 border-green-100 focus:border-green-200 focus:ring-green-100 text-black placeholder-gray-300"
                           placeholder="Enter phone number"
                         />
                       ) : (
@@ -1295,9 +1304,18 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <h2 className="text-2xl font-semibold text-gray-700">Delivery Calendar</h2>
               <DeliveryCalendar deliveries={deliveriesMock} />
             </div>
-          ) : null}
-        </main>
+          ) 
+           : activeTab === 'activecontract' ? (
+              <ActiveContract
+                customerInfo={customerInfo ? {
+                  id: currentUser?.id || '',
+                  name: customerInfo.name,
+                  email: customerInfo.email
+                } : null}
+              />
+            ) : null}  
       </div>
+      </main>
     </div>
   );
 };

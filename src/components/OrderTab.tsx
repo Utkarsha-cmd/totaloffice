@@ -632,15 +632,12 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
           <h2 className="text-2xl font-semibold text-gray-700">
             {services.find(s => s._id === selectedService)?.serviceName} Products
           </h2>
-          <Button
-            className="text-emerald-700 border-emerald-300 hover:bg-emerald-100 
-             focus-visible:ring-2 focus-visible:ring-emerald-500 
-             focus-visible:border-emerald-500 focus:outline-none"
-            variant="outline"
+          <button
             onClick={() => setSelectedService('')}
+            className="text-emerald-700 border border-emerald-100 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0"
           >
             Back to Services
-          </Button>
+          </button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -667,7 +664,7 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
                 <Button
                   onClick={() => addToCart(product)}
                   disabled={product.inStock === 0}
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white focus:ring-0 focus:ring-offset-0"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add to Cart
@@ -698,32 +695,28 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
                     <div className="text-sm text-gray-500">${item.price} each</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-emerald-700 border border-emerald-500 hover:bg-emerald-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                    <button
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="w-8 h-8 flex items-center justify-center text-emerald-700 border border-emerald-100 bg-emerald-50 hover:bg-emerald-100 rounded-md focus:outline-none focus:ring-0"
                     >
                       <Minus className="w-3 h-3" />
-                    </Button>
+                    </button>
                     <input
                       type="number"
                       value={item.quantity}
                       onChange={e =>
                         updateQuantity(item.id, parseInt(e.target.value) || 0)
                       }
-                      className="w-16 text-center text-gray-800 border border-emerald-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 rounded-md"
+                      className="w-16 text-center text-gray-800 border border-gray-200 focus:border-gray-300 focus:ring-0 rounded-md"
                       min="0"
                       max={item.inStock}
                     />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-emerald-700 border border-emerald-500 hover:bg-emerald-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                    <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-8 h-8 flex items-center justify-center text-emerald-700 border border-emerald-100 bg-emerald-50 hover:bg-emerald-100 rounded-md focus:outline-none focus:ring-0"
                     >
                       <Plus className="w-3 h-3" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -734,12 +727,12 @@ export const OrdersTab: React.FC<OrderTabProps> = (props) => {
                     ${getCartTotal().toFixed(2)}
                   </span>
                 </div>
-                <Button
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                <button
                   onClick={placeOrder}
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 rounded-md py-2 px-4 font-medium transition-colors focus:outline-none focus:ring-0 focus:ring-offset-0 focus:ring-transparent"
                 >
-                  Place Order
-                </Button>
+Place Order
+                </button>
               </div>
             </div>
           )}

@@ -1,0 +1,28 @@
+/* Override autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: black !important;
+  transition: background-color 5000s ease-in-out 0s;
+  background-color: white !important;
+  color: black !important;
+}
+
+/* For Firefox */
+input:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/* For Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}

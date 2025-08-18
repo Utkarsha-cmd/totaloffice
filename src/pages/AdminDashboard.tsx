@@ -717,7 +717,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ username, userType, onL
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <h1 className="ml-2 text-xl font-semibold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900">
                 {activeTab === 'dashboard' ? 'Dashboard Overview' : activeTab === 'details' ? 'Customer Details' : activeTab === 'orders' ? 'Orders':activeTab === 'quotes' ? 'Quotes ':activeTab === 'serviceagreement' ? 'Service Agreements' : activeTab === 'services'?'Services and Stocks' : 'Support Tickets'}
               </h1>
             </div>

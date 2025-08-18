@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from "@/lib/utils";
+import { DayPicker } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format, isSameDay, parseISO, isAfter, isBefore } from 'date-fns';
-import { CalendarIcon, Package, Clock, CheckCircle, Truck, AlertCircle, UserCheck, Shield } from 'lucide-react';
+import { CalendarIcon, Package, Clock, CheckCircle, Truck, AlertCircle, UserCheck, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { orderService, type Order } from '@/services/orderService';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -202,20 +204,20 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       {/* Calendar */}
-      <Card className="w-full text-gray-700 bg-white [&_.rdp-day]:text-gray-700 [&_.rdp-day_disabled]:text-gray-400 [&_.rdp-day_outside]:text-gray-400">
+      <Card className="w-full text-gray-600 bg-white border border-gray-200 [&_.rdp-day]:text-gray-700 [&_.rdp-day]:hover:bg-gray-50 [&_.rdp-button:hover:not([disabled])]:bg-gray-50 [&_.rdp-day_disabled]:text-gray-300 [&_.rdp-day_outside]:text-gray-300">
         <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5" />
               {isAdmin ? 'Delivery Management' : 'My Deliveries'}
             </CardTitle>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm">
               {isAdmin ? (
-                <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md">
+                <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-md">
                   <Shield className="w-4 h-4" /> Admin View
                 </span>
               ) : (
-                <span className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-md">
+                <span className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md">
                   <UserCheck className="w-4 h-4" /> Customer View
                 </span>
               )}
@@ -223,55 +225,76 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
           </div>
         </CardHeader>
         <CardContent>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            onMonthChange={handleMonthChange}
-            month={currentMonth}
-            className="w-full text-gray-700 bg-white"
-            modifiers={{
-              shipped: shippedDeliveries.map(d => d.deliveryDate),
-              delivered: deliveredDeliveries.map(d => d.deliveryDate),
-              today: new Date()
-            }}
-            modifiersStyles={{
-              shipped: {
-                backgroundColor: 'white',
-                color: '#374151',
-                borderRadius: '9999px',
-                border: '2px solid #3b82f6', // blue border for shipped
-                fontWeight: 'bold'
-              },
-              delivered: {
-                backgroundColor: 'white',
-                color: '#374151',
-                borderRadius: '9999px',
-                border: '2px solid #10b981', // green border for delivered
-                fontWeight: 'bold'
-              },
-              today: {
-                backgroundColor: '#f0f9ff',
-                color: '#0369a1',
-                border: '1px solid #7dd3fc',
-                fontWeight: 'bold'
-              },
-              selected: {
-                backgroundColor: '#d1fae5',
-                color: '#065f46',
-                borderRadius: '9999px',
-                border: '2px solid #059669',
-                fontWeight: 'bold'
-              },
-            }}
-          />
+          <div className="p-4 relative">
+            <div className="absolute left-4 right-4 top-4 flex justify-center">
+              <span className="text-sm font-medium">
+                {currentMonth.toLocaleString('default', { month: 'long' })} {currentMonth.getFullYear()}
+              </span>
+            </div>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              onMonthChange={handleMonthChange}
+              month={currentMonth}
+              className="w-full"
+              modifiers={{
+                shipped: shippedDeliveries.map(d => d.deliveryDate),
+                delivered: deliveredDeliveries.map(d => d.deliveryDate),
+                today: new Date()
+              }}
+              classNames={{
+                months: 'w-full',
+                month: 'w-full space-y-2',
+                caption: 'relative flex items-center justify-between py-1 mb-2 h-6',
+                caption_label: 'hidden',
+                nav: 'flex items-center justify-between w-full',
+                nav_button: 'h-6 w-6 p-0 rounded-full flex items-center justify-center hover:bg-gray-100',
+                table: 'w-full',
+                head_row: 'grid grid-cols-7 gap-0',
+                head_cell: 'text-xs text-gray-400 font-normal h-6 flex items-center justify-center',
+                row: 'grid grid-cols-7 gap-0 mt-1',
+                cell: 'text-center p-0',
+                day: 'h-8 w-8 rounded-full flex items-center justify-center mx-auto text-sm hover:bg-gray-100',
+                day_selected: '!bg-emerald-600 !text-white',
+                day_today: '!bg-emerald-100 !text-emerald-900',
+                day_outside: 'text-gray-300',
+                day_disabled: 'text-gray-200',
+                day_range_middle: '!bg-transparent',
+                day_hidden: 'invisible',
+              }}
+              formatters={{
+                formatWeekdayName: (date) => ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()]
+              }}
+              modifiersStyles={{
+                ...(shippedDeliveries.length > 0 && {
+                  shipped: {
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    borderRadius: '9999px',
+                    border: '1px solid #d1fae5',
+                    fontWeight: 400
+                  }
+                }),
+                ...(deliveredDeliveries.length > 0 && {
+                  delivered: {
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    borderRadius: '9999px',
+                    border: '1px solid #a7f3d0',
+                    fontWeight: 400
+                  }
+                })
+              }}
+            />
+          </div>
           <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+              <span className="inline-block w-3 h-3 rounded-full bg-emerald-200"></span>
               <span>Shipped</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+              <span className="inline-block w-3 h-3 rounded-full bg-emerald-400"></span>
               <span>Delivered</span>
             </div>
           </div>
@@ -296,14 +319,17 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
                           {delivery.items.length} items • {format(parseDeliveryDate(delivery.deliveryDate), 'MMM d, yyyy')}
                         </p>
                       </div>
-                      <Badge variant={delivery.status === 'shipped' ? 'default' : 'secondary'} className="ml-2">
-                        {delivery.status === 'shipped' ? (
-                          <Truck className="h-3 w-3 mr-1" />
-                        ) : (
-                          <Clock className="h-3 w-3 mr-1" />
-                        )}
-                        {delivery.status}
-                      </Badge>
+                      <Badge 
+                      variant={delivery.status === 'shipped' ? 'secondary' : 'outline'}
+                      className={`ml-2 ${delivery.status === 'shipped' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-white text-gray-700 border-gray-200'}`}
+                    >
+                      {delivery.status === 'shipped' ? (
+                        <Truck className="h-3 w-3 mr-1" />
+                      ) : (
+                        <Clock className="h-3 w-3 mr-1" />
+                      )}
+                      {delivery.status}
+                    </Badge>
                     </div>
                   </div>
                 ))}
@@ -317,13 +343,13 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
           <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Delivery Stats</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                 <p className="text-sm text-gray-600">Shipped</p>
-                <p className="text-xl font-bold text-blue-700">{shippedDeliveries.length}</p>
+                <p className="text-xl font-bold text-gray-700">{shippedDeliveries.length}</p>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg">
+              <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
                 <p className="text-sm text-gray-600">Delivered</p>
-                <p className="text-xl font-bold text-green-700">{deliveredDeliveries.length}</p>
+                <p className="text-xl font-bold text-emerald-700">{deliveredDeliveries.length}</p>
               </div>
             </div>
           </div>
@@ -331,7 +357,7 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
       </Card>
 
       {/* Selected Date Deliveries Panel */}
-      <Card className="bg-white text-gray-800 border border-gray-200">
+      <Card className="bg-white text-gray-700 border border-gray-200">
         <CardHeader>
           <CardTitle>
             {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Select a date'}
@@ -349,7 +375,9 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
                 <div key={delivery.id} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="font-medium">Order #{delivery.orderNumber || delivery.id.substring(0, 8)}</div>
-                    <Badge className={getStatusColor()}>
+                    <Badge 
+                      className={`${delivery.status === 'delivered' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'} border`}
+                    >
                       <div className="flex items-center gap-1">
                         {getStatusIcon(delivery.status)}
                         {delivery.status.replace('-', ' ')}
@@ -362,13 +390,13 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({ deliveries: 
                       <span className="text-sm text-gray-600">
                         {delivery.items.length} items • {delivery.paymentMethod}
                       </span>
-                      <Badge className={delivery.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                      <Badge className={delivery.status === 'delivered' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}>
                         {delivery.status}
                       </Badge>
                     </div>
                     
                     {delivery.trackingNumber && (
-                      <div className="text-sm text-blue-600">
+                      <div className="text-sm text-emerald-600">
                         Tracking: {delivery.trackingNumber}
                       </div>
                     )}
