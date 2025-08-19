@@ -464,11 +464,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
 
   const getStatusBadgeVariant = (status: SupportTicket['status']) => {
     switch (status) {
-      case 'open':return 'default';
-      case 'in-progress':return 'secondary';
+      case 'open': return 'outline';
+      case 'in-progress': return 'secondary';
       case 'resolved': return 'outline';
-      case 'closed':return 'destructive';
-      default:return 'default';
+      case 'closed': return 'destructive';
+      default: return 'default';
     }
   };
 
@@ -986,7 +986,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold text-gray-800">{ticket.title}</h3>
-                      <Badge variant="outline" className="text-xs text-black">
+                      <Badge variant="outline" className="text-xs text-emerald-700 border-emerald-300">
                         {ticket.ticketId}
                       </Badge>
                     </div>
@@ -1014,7 +1014,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                   <div className="flex items-center gap-1 ml-4">
                     {getStatusIcon(ticket.status)}
-                    <Badge variant={getStatusBadgeVariant(ticket.status)} className="text-black">
+                    <Badge variant={getStatusBadgeVariant(ticket.status)} className="text-black border-emerald-300">
                       {ticket.status.replace('-', ' ').toUpperCase()}
                     </Badge>
                   </div>

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTechnicianTickets } from '@/services/ticketService';
-import TechnicianTicketView from './TechnicianTicketView';
+import TechnicianTicketView from '../components/TechnicianTicketView';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import TicketsPage from './TicketsPage';
+import TicketsPage from '../components/TicketsPage';
 import {
   CheckCircle,
   AlertTriangle,
@@ -103,10 +103,10 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'border-l-red-500 bg-red-500/5';
-      case 'high': return 'border-l-yellow-500 bg-yellow-500/5';
-      case 'medium': return 'border-l-blue-500 bg-blue-500/5';
-      default: return 'border-l-gray-400 bg-gray-400/5';
+      case 'urgent': return 'border-l-emerald-700 bg-emerald-50';
+      case 'high': return 'border-l-emerald-600 bg-emerald-50';
+      case 'medium': return 'border-l-emerald-500 bg-emerald-50';
+      default: return 'border-l-emerald-400 bg-emerald-50';
     }
   };
 

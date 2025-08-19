@@ -20,7 +20,7 @@
 /* Definition of the design system with lighter pastel colors */
 @layer base {
   :root {
-    --background: 253 254 255; /* Even lighter blue-white */
+    --background: 255 255 255; /* Pure white */
     --foreground: 107 114 128; /* Softer gray */
 
     --card: 255 255 255;

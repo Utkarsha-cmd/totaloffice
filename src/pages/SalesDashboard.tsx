@@ -658,7 +658,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-emerald-50 to-green-100">
+    <div className="flex h-screen bg-white">
       {/* Side Navigation */}
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-emerald-900 to-emerald-800 shadow-xl flex flex-col">
         <div className="px-6 py-6 border-b border-emerald-700">
