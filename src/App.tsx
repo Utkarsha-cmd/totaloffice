@@ -12,11 +12,11 @@ import RegisterPage from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import CustomerDetails from "./components/CustomerDetails";
-import WarehouseDashboard from "./components/warehouse";
+import WarehouseDashboard from "./pages/warehouse";
 import CustomerHistoryPage from "./pages/CustomerHistoryPage";
-import TechnicianDashboard from "./components/TechnicianDasboard";
-import SalesDashboard from "./components/SalesDashboard";
-import EditQuote from "./pages/EditQuote"; 
+import TechnicianDashboard from "./pages/TechnicianDasboard";
+import SalesDashboard from "./pages/SalesDashboard";
+import EditQuote from "./pages/EditQuote";
 
 const queryClient = new QueryClient();
 
@@ -48,12 +48,12 @@ const App = () => {
 
   // Add a loading state to prevent premature redirects
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Check for saved auth state on initial load
   useEffect(() => {
     const savedRole = localStorage.getItem('userRole');
     const savedUsername = localStorage.getItem('username');
-    
+
     if (savedRole && savedUsername) {
       // Convert 'warehouse' to 'warehouse_staff' for backward compatibility
       const role = savedRole === 'warehouse' ? 'warehouse_staff' : savedRole;
@@ -62,21 +62,21 @@ const App = () => {
     }
     setIsLoading(false);
   }, []);
-  
+
   const getHomeComponent = () => {
     console.log('getHomeComponent - userRole:', userRole, 'username:', username);
-    
+
     // Show loading state while checking auth
     if (isLoading) {
       return <div>Loading...</div>;
     }
-    
+
     // If we're not logged in, redirect to login
     if (!userRole) {
       console.log('No user role, redirecting to login');
       return <Navigate to="/login" replace />;
     }
-    
+
     console.log(`Rendering dashboard for role: ${userRole}`);
     switch (userRole) {
       case "admin":
@@ -92,13 +92,13 @@ const App = () => {
       case "customer":
         return <CustomerDetails username={username} userType={userRole} onLogout={handleLogout} />;
       case "technician":
-         return (
-    <TechnicianDashboard
-      username={username}
-      userType={userRole}
-      onLogout={handleLogout}
-    />
-  );
+        return (
+          <TechnicianDashboard
+            username={username}
+            userType={userRole}
+            onLogout={handleLogout}
+          />
+        );
       case "warehouse_staff":
         return (
           <WarehouseDashboard
@@ -113,22 +113,22 @@ const App = () => {
   };
 
   console.log('App render - userRole:', userRole, 'username:', username);
-  
+
   // Log route rendering for debugging
   React.useEffect(() => {
     console.log('Rendering routes with userRole:', userRole);
   }, [userRole]);
-  
+
   // Add a protected route component
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (isLoading) {
       return <div>Loading...</div>;
     }
-    
+
     if (!userRole) {
       return <Navigate to="/login" replace />;
     }
-    
+
     return <>{children}</>;
   };
 
@@ -143,8 +143,8 @@ const App = () => {
               userRole ? <Navigate to="/admin" replace /> : <LoginPage onLogin={handleLogin} />
             } /> */}
             <Route path="/login" element={
-  userRole ? <Navigate to={`/${userRole}`} replace /> : <LoginPage onLogin={handleLogin} />
-} />
+              userRole ? <Navigate to={`/${userRole}`} replace /> : <LoginPage onLogin={handleLogin} />
+            } />
             <Route path="/register" element={<RegisterPage />} />
 
             {/* Admin */}
@@ -188,7 +188,7 @@ const App = () => {
                 {userRole === 'sales' ? <SalesDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
-            
+
             {/* Edit Quote */}
             <Route path="/quotes/edit/:id" element={
               <ProtectedRoute>
@@ -207,8 +207,8 @@ const App = () => {
             <Route path="/" element={
               isLoading ? <div>Loading...</div> : userRole ? <Navigate to={`/${userRole}`} replace /> : <Navigate to="/login" replace />
             } />
-            
-            
+
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
