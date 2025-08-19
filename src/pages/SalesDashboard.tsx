@@ -772,7 +772,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
                       <div>
                         <div className="text-sm font-medium text-gray-600">Pending</div>
                         <div className="text-2xl font-bold text-gray-800">
-                          {quotes.filter((q) => q.status === "draft" || q.status === "sent").length}
+                          {quotes.filter((q) => q.status === "draft").length}
                         </div>
                       </div>
                     </div>
@@ -820,7 +820,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
                 <CardContent className="p-6">
                   {quotes.length > 0 ? (
                     <div className="space-y-4">
-                      {quotes.slice(0, 5).map((quote) => (
+                      {quotes.map((quote) => (
                         <div key={quote.id} className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center space-x-4">
                             <div className="flex-shrink-0">
