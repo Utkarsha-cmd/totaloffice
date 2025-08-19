@@ -118,6 +118,20 @@ const getCurrentUser = () => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
+// Get auth token from localStorage
+const getAuthToken = () => {
+  if (typeof window === 'undefined') return null;
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  try {
+    const user = JSON.parse(userStr);
+    return user?.token || null;
+  } catch (error) {
+    console.error('Error parsing user from localStorage:', error);
+    return null;
+  }
+};
+
 // Get current user profile from backend
 const getCurrentUserProfile = async () => {
   try {
@@ -150,5 +164,6 @@ export const authService = {
   login,
   logout,
   getCurrentUser,
-  getCurrentUserProfile
+  getCurrentUserProfile,
+  getAuthToken
 };

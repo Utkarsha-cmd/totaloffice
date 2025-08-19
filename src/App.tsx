@@ -15,7 +15,8 @@ import CustomerDetails from "./components/CustomerDetails";
 import WarehouseDashboard from "./components/warehouse";
 import CustomerHistoryPage from "./pages/CustomerHistoryPage";
 import TechnicianDashboard from "./components/TechnicianDasboard";
-import SalesDashboard from "./components/SalesDashboard"; 
+import SalesDashboard from "./components/SalesDashboard";
+import EditQuote from "./pages/EditQuote"; 
 
 const queryClient = new QueryClient();
 
@@ -185,6 +186,13 @@ const App = () => {
             <Route path="/sales" element={
               <ProtectedRoute>
                 {userRole === 'sales' ? <SalesDashboard username={username} userType={userRole} onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+              </ProtectedRoute>
+            } />
+            
+            {/* Edit Quote */}
+            <Route path="/quotes/edit/:id" element={
+              <ProtectedRoute>
+                {userRole === 'sales' ? <EditQuote /> : <Navigate to="/login" replace />}
               </ProtectedRoute>
             } />
 

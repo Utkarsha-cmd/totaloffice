@@ -16,22 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Quote as QuoteType } from '@/services/quoteService';
 
-interface Quote {
+interface Quote extends Omit<QuoteType, '_id'> {
   id: string;
-  customerId: string;
-  customerName: string;
-  quoteNumber: string;
-  date: string;
-  expiryDate: string;
-  lineItems: LineItem[];
-  subtotal: number;
-  taxRate: number;
-  taxAmount: number;
-  total: number;
-  terms: string;
-  notes: string;
-  status: 'draft' | 'pending' | 'sent' | 'approved' | 'rejected';
+  _id?: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
 }
 
 interface LineItem {
@@ -56,42 +46,38 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
     switch (status) {
       case "draft":
         return <AlertCircle className={`${iconClass} text-gray-500`} />;
-      case "pending":
-        return <Clock className={`${iconClass} text-emerald-500`} />;
       case "sent":
         return <Send className={`${iconClass} text-emerald-500`} />;
-      case "approved":
+      case "accepted":
         return <CheckCircle className={`${iconClass} text-emerald-500`} />;
       case "rejected":
         return <XCircle className={`${iconClass} text-red-500`} />;
+      case "expired":
+        return <AlertCircle className={`${iconClass} text-amber-500`} />;
       default:
         return <AlertCircle className={`${iconClass} text-gray-500`} />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      draft: "outline",
-      pending: "outline",
-      sent: "outline", 
-      approved: "default",
-      rejected: "destructive"
-    };
-    
-    const variantClasses: Record<string, string> = {
-      draft: "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300",
-      pending: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-200",
-      sent: "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-200",
-      approved: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-300",
-      rejected: "" // default destructive styles will be used
-    };
-    
+  // Status badge component
+  const StatusBadge = ({ status }: { status: Quote['status'] }) => {
+    const statusConfig = {
+      draft: { bg: 'bg-gray-100 text-gray-800', icon: Clock, label: 'Draft' },
+      sent: { bg: 'bg-blue-100 text-blue-800', icon: Send, label: 'Sent' },
+      accepted: { bg: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Accepted' },
+      rejected: { bg: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' },
+      expired: { bg: 'bg-amber-100 text-amber-800', icon: AlertCircle, label: 'Expired' },
+    }[status] || { bg: 'bg-gray-100 text-gray-800', icon: Clock, label: 'Unknown' };
+
+    const Icon = statusConfig.icon;
+
     return (
       <Badge 
-        variant={variants[status] || "outline"}
-        className={`${variantClasses[status] || ''} transition-colors`}
+        variant="outline"
+        className={`${statusConfig.bg} transition-colors`}
       >
-        {status?.charAt(0).toUpperCase() + status?.slice(1)}
+        <Icon size={14} className="mr-1" />
+        {statusConfig.label}
       </Badge>
     );
   };
@@ -99,14 +85,13 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
   const filteredQuotes = quotes.filter((quote) => {
     const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
     const matchesSearch = 
-      quote.quoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+      (quote.quoteNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (quote.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
   const handleSendToCustomer = (quoteId: string) => {
     onUpdateQuoteStatus(quoteId, 'sent');
-    toast.success("Quote sent to customer successfully!");
   };
 
   const handleDownloadPDF = (quote: Quote) => {
@@ -138,10 +123,10 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
                 >
                   <option value="all">All Status</option>
                   <option value="draft">Draft</option>
-                  <option value="pending">Pending</option>
                   <option value="sent">Sent</option>
-                  <option value="approved">Approved</option>
+                  <option value="accepted">Accepted</option>
                   <option value="rejected">Rejected</option>
+                  <option value="expired">Expired</option>
                 </select>
               </div>
               <div className="relative">
@@ -206,7 +191,7 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
                               #{quote.quoteNumber}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Expires: {quote.expiryDate}
+                              Expires: {new Date(quote.expiryDate).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
@@ -217,7 +202,7 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {quote.date}
+                        {new Date(quote.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">
@@ -225,7 +210,7 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(quote.status)}
+                        <StatusBadge status={quote.status} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
@@ -241,7 +226,7 @@ const QuoteTracking: React.FC<QuoteTrackingProps> = ({ quotes, onUpdateQuoteStat
                           >
                             <Download size={14} />
                           </button>
-                          {quote.status === "approved" && (
+                          {quote.status === "draft" && (
                             <Button
                               variant="default"
                               size="sm"
