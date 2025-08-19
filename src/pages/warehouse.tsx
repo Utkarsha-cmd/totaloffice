@@ -53,9 +53,8 @@ interface WarehouseDashboardProps {
   onLogout: () => void;
 }
 
-// Helper function to map backend order to frontend order
+
 const mapBackendOrder = (backendOrder: any): Order => {
-  // Calculate total from items if totalAmount is not provided
   const calculateTotal = () => {
     if (backendOrder.totalAmount) return backendOrder.totalAmount;
     if (backendOrder.total) return backendOrder.total;

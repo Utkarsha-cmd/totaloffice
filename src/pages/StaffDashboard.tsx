@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, userService } from '../services/userService';
 import { orderService, Order } from '../services/orderService';
 import OrderCard from '../components/OrderCard';
-import { LayoutDashboard, Users, Clock, Menu, X , History, Package, Search} from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Menu, LogOut, History, Package, Search} from 'lucide-react';
 
 interface StaffDashboardProps {
   username: string;
@@ -102,7 +102,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <aside className="bg-[#0d3324] text-white min-h-screen shadow-md border-r border-green-800 flex flex-col">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-[#0d3324] shadow-lg border-r border-green-800 flex flex-col">
   {/* Header */}
   <div className="px-6 py-8">
     <h1 className="text-2xl font-bold text-white tracking-wide">Staff Portal</h1>
@@ -144,7 +144,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
       onClick={onLogout}
       className="flex items-center gap-2 text-sm font-medium hover:text-red-400 transition"
     >
-      <X className="w-4 h-4" />
+      <LogOut className="w-4 h-4" />
       Sign Out
     </button>
   </div>
@@ -152,7 +152,7 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ username, onLogout }) =
 
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col ml-64">
         <main className="flex-1 px-6 py-6">
           {activeTab === 'customers' ? (
             <>

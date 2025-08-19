@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTechnicianTickets } from '@/services/ticketService';
-import TechnicianTicketView from './TechnicianTicketView';
+import TechnicianTicketView from '../components/TechnicianTicketView';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import TicketsPage from './TicketsPage';
+import TicketsPage from '../components/TicketsPage';
 import {
   CheckCircle,
   AlertTriangle,
