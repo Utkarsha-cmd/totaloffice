@@ -103,10 +103,10 @@ const TechnicianDashboard: React.FC<TechnicianDashboardProps> = ({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'border-l-red-500 bg-red-500/5';
-      case 'high': return 'border-l-yellow-500 bg-yellow-500/5';
-      case 'medium': return 'border-l-blue-500 bg-blue-500/5';
-      default: return 'border-l-gray-400 bg-gray-400/5';
+      case 'urgent': return 'border-l-emerald-700 bg-emerald-50';
+      case 'high': return 'border-l-emerald-600 bg-emerald-50';
+      case 'medium': return 'border-l-emerald-500 bg-emerald-50';
+      default: return 'border-l-emerald-400 bg-emerald-50';
     }
   };
 

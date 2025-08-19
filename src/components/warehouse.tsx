@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, LogOut, CheckCircle, RefreshCw, Truck, XCircle, Clock } from 'lucide-react';
 import { orderService } from '@/services/orderService';
 
 interface OrderItem {
@@ -82,6 +82,36 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
   const [activeTab, setActiveTab] = useState<'new' | 'delivered'>('new');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const getStatusColor = (status: OrderStatus) => {
+    switch (status) {
+      case 'delivered':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'processing':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'shipped':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'cancelled':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+  };
+
+  const getStatusIcon = (status: OrderStatus) => {
+    switch (status) {
+      case 'delivered':
+        return <CheckCircle className="h-3 w-3" />;
+      case 'processing':
+        return <RefreshCw className="h-3 w-3" />;
+      case 'shipped':
+        return <Truck className="h-3 w-3" />;
+      case 'cancelled':
+        return <XCircle className="h-3 w-3" />;
+      default:
+        return <Clock className="h-3 w-3" />;
+    }
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -167,28 +197,28 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
 
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-[#f3fdf7] overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md flex flex-col justify-between">
+      <div className="w-64 bg-[#0d3324] shadow-lg flex flex-col justify-between fixed h-full">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-emerald-600 mb-6">Warehouse</h2>
+          <h2 className="text-xl font-bold text-white mb-6">Warehouse</h2>
           <div className="space-y-2">
             <button
               onClick={() => setActiveTab('new')}
-              className={`w-full text-left px-4 py-2 rounded-md font-medium ${
+              className={`w-full text-left px-4 py-2 rounded-md font-medium transition-colors ${
                 activeTab === 'new'
-                  ? 'bg-emerald-500 text-white'
-                  : 'hover:bg-gray-100 text-gray-800'
+                  ? 'bg-green-100 text-green-900 border-r-4 border-green-600'
+                  : 'text-green-200 hover:bg-green-800 hover:text-white'
               }`}
             >
               New Orders
             </button>
             <button
               onClick={() => setActiveTab('delivered')}
-              className={`w-full text-left px-4 py-2 rounded-md font-medium ${
+              className={`w-full text-left px-4 py-2 rounded-md font-medium transition-colors ${
                 activeTab === 'delivered'
-                  ? 'bg-emerald-500 text-white'
-                  : 'hover:bg-gray-100 text-gray-800'
+                  ? 'bg-emerald-50 text-emerald-800'
+                  : 'text-green-200 hover:bg-green-800 hover:text-white'
               }`}
             >
               Orders Delivered
@@ -197,18 +227,23 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
         </div>
 
         {/* Logout section at the bottom */}
-        <div className="p-6 border-t text-sm text-gray-600">
-          <p className="mb-2">Logged in as <strong>{username}</strong></p>
-          <Button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white w-full">
-            Logout
+        <div className="p-4 border-t border-gray-700">
+          <Button 
+            onClick={onLogout} 
+            variant="ghost" 
+            size="sm"
+            className="w-full flex items-center justify-center text-green-200 hover:bg-green-800 hover:text-white transition-colors"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign out
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 ml-64 overflow-y-auto">
         {activeTab === 'new' ? (
-          <Card className="shadow-lg bg-white">
+          <Card className="shadow-lg bg-white border-white">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-800">New Orders</CardTitle>
             </CardHeader>
@@ -226,7 +261,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
                 <div className="p-4 text-gray-500 text-center">No new orders found.</div>
               ) : (
                 orders.map((order) => (
-                  <div key={order._id} className="mb-6 border border-gray-200 rounded-md p-4 relative">
+                  <div key={order._id} className="mb-6 border border-white rounded-lg p-4 relative bg-emerald-50 shadow-sm">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-md font-bold text-emerald-600">Order #{order.orderNumber}</h3>
@@ -260,24 +295,24 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
                       </Button>
                     </div>
 
-                    <table className="min-w-full border border-gray-300 shadow-sm rounded-lg overflow-hidden">
-                      <thead className="bg-green-100 text-gray-900 font-semibold border-b border-gray-300">
+                    <table className="min-w-full border border-white shadow-sm rounded-lg overflow-hidden">
+                      <thead className="bg-emerald-100 text-emerald-900 font-semibold border-b border-emerald-200">
                         <tr>
-                          <th className="py-2 px-4 border border-gray-300">Product</th>
-                          <th className="py-2 px-4 border border-gray-300">Quantity</th>
-                          <th className="py-2 px-4 border border-gray-300">Price</th>
-                          <th className="py-2 px-4 border text-center border-gray-300">Shipped</th>
+                          <th className="py-2 px-4 border border-emerald-200">Product</th>
+                          <th className="py-2 px-4 border border-emerald-200">Quantity</th>
+                          <th className="py-2 px-4 border border-emerald-200">Price</th>
+                          <th className="py-2 px-4 border border-emerald-200 text-center">Shipped</th>
                         </tr>
                       </thead>
                       <tbody>
                         {order.items.map((item) => (
-                          <tr key={item._id} className="border-t text-gray-800">
-                            <td className="py-2 px-4 border border-gray-300">{item.name}</td>
-                            <td className="py-2 px-4 border border-gray-300">{item.quantity}</td>
-                            <td className="py-2 px-4 border border-gray-300">
+                          <tr key={item._id} className="border-t border-emerald-50 text-gray-800">
+                            <td className="py-2 px-4 border border-emerald-100">{item.name}</td>
+                            <td className="py-2 px-4 border border-emerald-100">{item.quantity}</td>
+                            <td className="py-2 px-4 border border-emerald-100">
                               ${(item.price * item.quantity).toFixed(2)}
                             </td>
-                            <td className="py-2 px-4 border border-gray-300 text-center">
+                            <td className="py-2 px-4 border border-emerald-100 text-center">
                               <Checkbox
                                 checked={item.isShipped || false}
                                 onCheckedChange={() => handleToggle(order._id, item._id)}
@@ -294,7 +329,7 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
             </CardContent>
           </Card>
         ) : (
-          <Card className="shadow-lg bg-white">
+          <Card className="shadow-lg bg-white border-white">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-800">Delivered Orders</CardTitle>
             </CardHeader>
@@ -316,11 +351,11 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
                         : 'Not specified';
                     
                     return (
-                      <div key={order._id} className="border rounded-lg p-4 bg-white shadow-sm">
-                        <div className="flex justify-between items-start mb-3 border-b pb-2">
+                      <div key={order._id} className="border border-white rounded-lg p-4 bg-emerald-50 shadow-sm">
+                        <div className="flex justify-between items-start mb-3 pb-2">
                           <div>
-                            <h3 className="font-bold text-lg text-black">Order #{order.orderNumber || 'N/A'}</h3>
-                            <p className="text-sm text-gray-700">
+                            <h3 className="font-bold text-lg text-emerald-900">Order #{order.orderNumber || 'N/A'}</h3>
+                            <p className="text-sm text-emerald-700">
                               {orderDate ? new Date(orderDate).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
@@ -331,35 +366,36 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
                             </p>
                           </div>
                           <div className="text-right">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                              order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status || 'delivered')}`}>
+                              <span className="flex items-center">
+                                {getStatusIcon(order.status || 'delivered')}
+                                <span className="ml-1">
+                                  {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Unknown'}
+                                </span>
+                              </span>
                             </span>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-black mt-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-emerald-900 mt-3">
                           {/* Customer Information */}
-                          <div className="space-y-1">
-                            <h4 className="font-semibold text-gray-700 border-b pb-1">Customer</h4>
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-emerald-800 border-b border-emerald-100 pb-1">Customer</h4>
                             <p className="font-medium">{order.customerName || order.user?.name || 'Guest Customer'}</p>
                             {order.user?.company && (
-                              <p className="text-gray-700">{order.user.company}</p>
+                              <p className="text-emerald-800 opacity-90">{order.user.company}</p>
                             )}
                             {order.user?.email && (
-                              <p className="text-gray-600 text-sm">{order.user.email}</p>
+                              <p className="text-emerald-700 text-sm">{order.user.email}</p>
                             )}
                           </div>
                           
                           {/* Shipping Information */}
-                          <div className="space-y-1">
-                            <h4 className="font-semibold text-gray-700 border-b pb-1">Shipping</h4>
+                          <div className="space-y-2">
+                            <h4 className="font-semibold text-emerald-800 border-b border-emerald-100 pb-1">Shipping</h4>
                             <p className="whitespace-pre-line">{shippingAddress || 'Not specified'}</p>
                             {order.expectedDelivery && (
-                              <p className="mt-1">
+                              <p className="mt-1 text-emerald-800">
                                 <span className="font-medium">Expected:</span> {new Date(order.expectedDelivery).toLocaleDateString()}
                               </p>
                             )}
@@ -367,20 +403,24 @@ const WarehouseDashboard: React.FC<WarehouseDashboardProps> = ({ username, userT
                         </div>
                         
                         {/* Order Summary */}
-                        <div className="mt-3 text-sm text-black">
-                          <p><span className="font-medium">Total Items:</span> {order.items?.length || 0}</p>
-                          <p><span className="font-medium">Order Total:</span> ${order.totalAmount?.toFixed(2) || '0.00'}</p>
+                        <div className="mt-4 text-sm text-emerald-900 bg-white/50 p-3 rounded-md border border-emerald-100">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">Total Items: <span className="font-normal">{order.items?.length || 0}</span></p>
+                              <p className="font-medium">Order Total: <span className="font-semibold text-emerald-800">${order.totalAmount?.toFixed(2) || '0.00'}</span></p>
+                            </div>
+                          </div>
                         </div>
                         
                         {/* Items List */}
                         {order.items?.length > 0 && (
-                          <div className="mt-4 border-t pt-3">
-                            <h4 className="font-semibold text-black mb-2">Items</h4>
+                          <div className="mt-4 border-t border-emerald-100 pt-3">
+                            <h4 className="font-semibold text-emerald-800 mb-3">Items</h4>
                             <div className="space-y-2">
                               {order.items.map((item, index) => (
-                                <div key={item._id || index} className="flex justify-between text-sm text-black">
-                                  <span className="text-black">{item.quantity} × {item.name || 'Unnamed Item'}</span>
-                                  <span className="text-black">${(item.price || 0).toFixed(2)}</span>
+                                <div key={item._id || index} className="flex justify-between text-sm text-emerald-900 bg-white/70 p-2 rounded border border-emerald-50">
+                                  <span className="font-medium">{item.quantity} × {item.name || 'Unnamed Item'}</span>
+                                  <span className="font-medium text-emerald-800">${(item.price || 0).toFixed(2)}</span>
                                 </div>
                               ))}
                             </div>
